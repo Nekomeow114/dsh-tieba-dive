@@ -314,7 +314,7 @@ window.__ModuleLoader__.load({
           h('div', { key: 'kw', className: 'tb-row' }, [
             h('span', { key: 'a', className: 'tb-kv' }, '关键词'),
             h('input', { key: 'b', className: 'tb-in', style: { flex: 1, minWidth: 160 },
-              placeholder: '逗号分隔，标题命中的排前面（可空）',
+              placeholder: '可空，逗号分隔',
               value: (c.keywords || []).join('，'),
               onChange: (e) => setCfg({ ...c, keywords: e.target.value.split(/[，,]/) }),
               onBlur: () => save({ keywords: (c.keywords || []).map((x) => String(x).trim()).filter(Boolean) }) }),
@@ -357,9 +357,14 @@ window.__ModuleLoader__.load({
               onClick: () => save({ styleSamples: c.styleSamples || '' }) }, '保存语气样本'),
             h('span', { key: 'k', className: 'tb-kv' }, '模型回帖前会读这几句，照着学长短和口气'),
           ]),
-          h('input', { key: 'f', className: 'tb-in', style: { marginTop: 6 }, placeholder: 'persona.md 或 /绝对/路径.md',
-            value: c.personaFile || '', onChange: (e) => setCfg({ ...c, personaFile: e.target.value }),
-            onBlur: () => save({ personaFile: c.personaFile || '' }) }),
+          h('details', { key: 'adv2', style: { marginTop: 8 } }, [
+            h('summary', { key: 's', className: 'tb-kv', style: { cursor: 'pointer' } }, '进阶：改用人设文件（填了会覆盖上面的文本框）'),
+            h('input', { key: 'f', className: 'tb-in', style: { marginTop: 6 },
+              placeholder: 'persona.md（相对 tieba-duty 目录）或 /绝对/路径.md',
+              value: c.personaFile || '', onChange: (e) => setCfg({ ...c, personaFile: e.target.value }),
+              onBlur: () => save({ personaFile: c.personaFile || '' }) }),
+            h('div', { key: 'h', className: 'tb-kv' }, '相对路径从 $DSH_HOME/tieba-duty/ 算起；留空就用上面的文本框。'),
+          ]),
         ]),
 
         // ── ④ 自动化（折叠）──
