@@ -41,7 +41,7 @@ cookie 从 jar 文件读、**不进 argv**（`ps` 里看不到）。
 ```bash
 dsh plugin --profile web add dsh-tieba-scroll     # npm 发布后
 # 或者直接从仓库装：
-dsh plugin --profile web add github:<你的名字>/dsh-tieba-scroll
+dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll
 ```
 
 装完**重启一次 DSH**（bundle 要重新组装）。

@@ -8,7 +8,7 @@
 1. 装：
    ```bash
    dsh plugin --profile web add dsh-tieba-scroll
-   # 或 github:<name>/dsh-tieba-scroll
+   # 或 github:Nekomeow114/dsh-tieba-scroll
    ```
 2. ⚠️ **提醒重启一次 dsh**（bundle 层要重启才组装）。
 3. 让用户进 **设置 → 刷贴吧**，贴 `BDUSS`，点「保存并测试」。
