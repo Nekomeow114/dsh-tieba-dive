@@ -1,0 +1,8 @@
+node_modules/
+*.log
+.DS_Store
+# 凭证与运行数据永远不进仓库
+cookie.txt
+state.json
+audit.jsonl
+reports/

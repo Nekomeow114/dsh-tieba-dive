@@ -1,0 +1,42 @@
+{
+  "name": "dsh-tieba-scroll",
+  "version": "0.1.0",
+  "description": "DSH 插件：每天替你刷几个百度贴吧 —— 读帖挑值得看的、写日报；可选签到与回帖（默认关，带回帖闸门）",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "tieba",
+    "baidu",
+    "mcp",
+    "duty"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib",
+    "prompts",
+    "README.md",
+    "AGENTS.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "dsh": ">=0.1.7-rc.1",
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node test/smoke.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/<your-name>/dsh-tieba-scroll.git"
+  }
+}

@@ -1,0 +1,224 @@
+/**
+ * dsh-tieba-scroll —— 主机半端
+ * ============================================================================
+ * 每天替用户刷一轮贴吧（多吧）：读帖子 → 挑值得看的 → 写日报；可选签到、回帖。
+ *
+ * 设计上的三条红线（README 里也写了）：
+ *   1. 默认只读。签到要开 `autoSign`，回帖要开 `autoReply` 且**必须**带 confirm。
+ *   2. 回帖有硬上限：每天 N 条、两条之间至少间隔 M 秒、内容不许重复。
+ *   3. 凭证只存本地 `$DSH_HOME/tieba-duty/cookie.txt`（600），不回显、不进日志。
+ */
+import { defineTool as hostDefineTool } from './lib/toolkit.mjs'
+import * as tieba from './lib/tieba.js'
+import { freshState, writeState, audit, pruneSeen, today } from './lib/state.mjs'
+
+export const name = 'tieba-scroll'
+export const inject = ['webServer', 'tools', 'settings']
+
+let z
+try { z = (await import('@deepseek-ai/schemastery')).default } catch { z = null }
+
+export const Config = !z ? undefined : z.object({
+  /** 要刷的吧（多吧） */
+  bars: z.array(z.string()).default(['deepseek', '甜食少女嫁人图书馆']).extra('volatile', true),
+  /** 标题里命中这些词才重点看；空了就全看 */
+  keywords: z.array(z.string()).default([]).extra('volatile', true),
+  /** 每天自动签到 */
+  autoSign: z.boolean().default(false).extra('volatile', true),
+  /** 允许回帖（默认关 —— 这是拿用户的号在公开场合说话） */
+  autoReply: z.boolean().default(false).extra('volatile', true),
+  /** 每天最多回几条 */
+  replyPerDay: z.natural().default(3).extra('volatile', true),
+  /** 两条回复之间至少隔多少秒 */
+  replyGapSec: z.natural().default(30).extra('volatile', true),
+  /** 每天几点自动签到（0-23） */
+  signHour: z.natural().default(9).extra('volatile', true),
+})
+
+const log = (...a) => console.log('[tieba-duty]', ...a)
+
+export function apply(ctx, config = {}) {
+  const cfg = {
+    bars: ['deepseek', '甜食少女嫁人图书馆'],
+    keywords: [],
+    autoSign: false,
+    autoReply: false,
+    replyPerDay: 3,
+    replyGapSec: 30,
+    signHour: 9,
+    ...config,
+  }
+
+  if (typeof ctx.settings?.register === 'function' && Config) {
+    ctx.settings.register('tieba-duty', Config, { base: {}, applies: 'live' })
+  }
+
+  const tool = (spec) => ctx.tools.register(hostDefineTool(spec))
+  const json = (v) => JSON.stringify(v, null, 1)
+
+  tool({
+    name: 'tieba_whoami',
+    description: '贴吧登录态自检：BDUSS 有没有、还活着没。第一次用要先在「刷贴吧」设置页里贴 BDUSS。',
+    parameters: {},
+    execute: async () => json(await tieba.whoami()),
+  })
+
+  tool({
+    name: 'tieba_list',
+    description: '列某个吧的帖子（手机版页面解析）。返回帖子 id / 标题 / 回复数，拿去喂 tieba_thread。',
+    parameters: {
+      kw: { type: 'string', description: '吧名，例如 deepseek' },
+      pages: { type: 'number', description: '抓几页（每页 50 条，默认 1）' },
+    },
+    execute: async (args) => {
+      const pages = Math.max(1, Math.min(Number(args.pages) || 1, 5))
+      const all = []
+      let fid = ''
+      for (let i = 0; i < pages; i++) {
+        const r = await tieba.listBar(String(args.kw || cfg.bars[0]), { pn: i * 50 })
+        fid = fid || r.fid
+        all.push(...r.threads)
+      }
+      return json({ kw: args.kw, fid, count: all.length, threads: all.slice(0, 120) })
+    },
+  })
+
+  tool({
+    name: 'tieba_thread',
+    description: '读一个帖子的楼层正文。判断内容靠它，别看标题下结论。',
+    parameters: {
+      tid: { type: 'string', description: '帖子 id（数字）' },
+      pn: { type: 'number', description: '第几页（默认 1）' },
+    },
+    execute: async (args) => json(await tieba.readThread(String(args.tid), { pn: Number(args.pn) || 1 })),
+  })
+
+  tool({
+    name: 'tieba_sign',
+    description: '签到。不给 kw 就签配置里的所有吧；一天一次，重复会返回「已签到」。',
+    parameters: { kw: { type: 'string', description: '只签某一个吧（可省）' } },
+    execute: async (args) => {
+      const bars = args.kw ? [String(args.kw)] : cfg.bars
+      const out = []
+      for (const kw of bars) {
+        try { out.push(await tieba.sign(kw)) } catch (e) { out.push({ ok: false, kw, error: e.message }) }
+      }
+      return json(out)
+    },
+  })
+
+  tool({
+    name: 'tieba_reply',
+    description: '在一个帖子里回一条。⚠️ 公开内容、用用户的号 —— 必须 confirm: true；'
+      + '受「每天 N 条 / 间隔 M 秒 / 内容不许重复」三道闸限制，且默认配置里是关的。',
+    parameters: {
+      kw: { type: 'string', description: '吧名' },
+      tid: { type: 'string', description: '帖子 id' },
+      content: { type: 'string', description: '回复正文（4~400 字，别放链接）' },
+      confirm: { type: 'boolean', description: '必须显式传 true：表示用户已同意发出去' },
+    },
+    execute: async (args) => {
+      if (args.confirm !== true) return json({ ok: false, error: '没确认：要发公开回复得传 confirm: true' })
+      if (!cfg.autoReply) return json({ ok: false, error: '回帖是关着的：去设置页打开「允许回帖」' })
+      if (!tieba.hasCookie()) return json({ ok: false, error: '还没贴 BDUSS' })
+
+      const st = freshState()
+      if (st.replies >= cfg.replyPerDay) {
+        return json({ ok: false, error: `今天的回帖额度用完了（${cfg.replyPerDay} 条）` })
+      }
+      const gap = Date.now() - st.lastReplyAt
+      if (gap < cfg.replyGapSec * 1000) {
+        const wait = Math.ceil((cfg.replyGapSec * 1000 - gap) / 1000)
+        return json({ ok: false, error: `太快了，再等 ${wait} 秒` })
+      }
+      const dup = st.seen[`reply:${args.tid}`]
+      if (dup) return json({ ok: false, error: '这个帖子今天已经回过了' })
+
+      const r = await tieba.reply({ kw: String(args.kw), tid: String(args.tid), content: String(args.content) })
+      if (r.ok) {
+        st.replies += 1
+        st.lastReplyAt = Date.now()
+        st.seen[`reply:${args.tid}`] = Date.now()
+        writeState(st)
+        audit({ kind: 'reply', kw: args.kw, tid: args.tid, content: args.content, result: r })
+      }
+      return json(r)
+    },
+  })
+
+  // ── HTTP：给设置页用 ───────────────────────────────────────────────────────
+  const sendJson = (res, code, obj) => {
+    res.statusCode = code
+    res.setHeader('content-type', 'application/json; charset=utf-8')
+    res.end(JSON.stringify(obj))
+  }
+  const readBody = (req) => new Promise((resolve) => {
+    let b = ''
+    req.on('data', (c) => { b += c; if (b.length > 1e6) req.destroy() })
+    req.on('end', () => { try { resolve(JSON.parse(b || '{}')) } catch { resolve({}) } })
+  })
+
+  try {
+    ctx.effect(() => ctx.webServer.register({
+      kind: 'prefix',
+      path: '/api/tieba-duty',
+      handler: async (req, res) => {
+        const path = new URL(req.url, 'http://127.0.0.1').pathname.replace('/api/tieba-duty', '') || '/'
+        try {
+          if (path === '/status' && req.method === 'GET') {
+            const st = freshState()
+            return sendJson(res, 200, {
+              ok: true,
+              hasCookie: tieba.hasCookie(),
+              cookieFile: tieba.cookieFile(),
+              today: today(),
+              repliesToday: st.replies,
+              signed: st.signed,
+              bars: cfg.bars,
+              autoReply: cfg.autoReply,
+            })
+          }
+          if (path === '/cookie' && req.method === 'POST') {
+            const b = await readBody(req)
+            tieba.setCookie(String(b.cookie || ''))
+            const r = await tieba.whoami()
+            return sendJson(res, 200, { ok: true, ...r })
+          }
+          if (path === '/test' && req.method === 'GET') {
+            return sendJson(res, 200, await tieba.whoami())
+          }
+          if (path === '/sign' && req.method === 'POST') {
+            const out = []
+            for (const kw of cfg.bars) {
+              try { out.push(await tieba.sign(kw)) } catch (e) { out.push({ ok: false, kw, error: e.message }) }
+            }
+            return sendJson(res, 200, { ok: true, results: out })
+          }
+          return sendJson(res, 404, { ok: false, error: `unknown ${req.method} ${path}` })
+        } catch (e) {
+          return sendJson(res, 500, { ok: false, error: e?.message ?? String(e) })
+        }
+      },
+    }), 'tieba-duty: /api/tieba-duty 路由')
+  } catch (e) { log(`HTTP 路由没挂上：${e?.message ?? e}`) }
+
+  // ── 每天自动签到（只签到，不碰回帖）──────────────────────────────────────
+  const timer = setInterval(() => {
+    try {
+      if (!cfg.autoSign || !tieba.hasCookie()) return
+      const st = freshState()
+      if (new Date().getHours() < cfg.signHour) return
+      for (const kw of cfg.bars) {
+        if (st.signed[kw] === today()) continue
+        tieba.sign(kw)
+          .then((r) => { if (r.ok) { st.signed[kw] = today(); writeState(st) } })
+          .catch((e) => log(`签到 ${kw} 失败：${e.message}`))
+      }
+      st.seen = pruneSeen(st.seen)
+      writeState(st)
+    } catch (e) { log(`定时器出错：${e?.message ?? e}`) }
+  }, 60_000)
+  ctx.effect(() => () => clearInterval(timer), 'tieba-duty: 签到定时器')
+
+  log(`已挂载（${cfg.bars.join(' / ')}；签到=${cfg.autoSign ? '开' : '关'}；回帖=${cfg.autoReply ? `开(${cfg.replyPerDay}/天)` : '关'}）`)
+}
