@@ -149,6 +149,13 @@ export function apply(ctx, config = {}) {
   })
 
   tool({
+    name: 'tieba_settings',
+    description: '看当前配置（吧列表 / 每轮读几条回几条 / 签到与回帖开关 / 每天上限）。动手前先看它，别猜。',
+    parameters: {},
+    execute: async () => json(cfgOf()),
+  })
+
+  tool({
     name: 'tieba_persona',
     description: '读当前的人设（设置页里写的，或指向的外部文件）。写日报/回帖前先读它，照着这个人设说话。',
     parameters: {},

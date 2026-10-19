@@ -58,6 +58,7 @@ dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll
 3. 下面这些都在**插件自己的设置页**里改（不依赖宿主自动表单）：
    - 要刷的吧（一行一个）
    - 自动签到（每天 `signHour` 点后一次）
+   - 每轮刷多少：读几个楼（默认 5）、回几条（默认 1）
    - 允许回帖（**默认关**）+ 每天条数 + 间隔秒数
 
    配置落盘在 `$DSH_HOME/tieba-duty/config.json`（600），走 `/api/tieba-duty/config` 读写。
@@ -79,6 +80,7 @@ dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll
 | `tieba_sign` | 签到（一天一次，幂等） |
 | `tieba_reply` | 回一条（必须 `confirm: true`，受每日上限/间隔/去重限制） |
 | `tieba_follow` | 关注一个吧（app 端签名接口，已关注则 `already: true`） |
+| `tieba_settings` | 看当前配置（吧列表 / 每轮读几条回几条 / 各开关） |
 | `tieba_persona` | 读当前人设（设置页里写的，或指向的文件） |
 | `tieba_diary_write` | 写日记：`public` 给主人看 / `private` 私人 |
 | `tieba_diary_read` | 读日记：读 `private` 必须显式 `confirm: true` |

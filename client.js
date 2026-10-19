@@ -127,7 +127,7 @@ window.__ModuleLoader__.load({
           '每天替你看几个吧：读帖、挑值得的、写日报。回帖默认关闭，开了也受每日条数和间隔限制。'),
         h('div', { className: 'tb-warn', key: 'w' },
           'BDUSS 等于你的登录凭证：它只存在本机 $DSH_HOME/tieba-duty/cookie.txt（600），不回显、不进日志。'
-          + '用完请去贴吧「账号安全 → 退出所有设备」。'),
+          + '想要清除登录数据，去贴吧「账号安全 → 退出所有设备」。'),
 
         h(Field, { key: 'cookie', label: 'BDUSS' }, [
           h('input', {
@@ -140,8 +140,7 @@ window.__ModuleLoader__.load({
           ]),
           h('div', { key: 'hint', className: 'tb-kv', style: { marginTop: 8 } },
             '不知道怎么拿 BDUSS？直接在聊天里问大肥鱼：「教我怎么拿贴吧的 BDUSS」，它会一步步告诉你。'),
-          h('div', { key: 'hint2', className: 'tb-kv' },
-            '要点：贴吧 cookie 里那一行，约 190 个字符；带不带 BDUSS= 前缀都行，别手打（l / I / 1 最容易错）。'),
+
         ]),
 
         h(Field, { key: 'bars', label: '要刷的吧（一行一个）' }, [
@@ -195,6 +194,20 @@ window.__ModuleLoader__.load({
               onChange: (e) => setCfg({ ...c, personaFile: e.target.value }),
             }),
             h('div', { key: 'h', className: 'tb-kv' }, '路径优先于人设框；留空就用上面框里的内容。'),
+          ]),
+        ]),
+
+        h(Field, { key: 'round', label: '每轮刷多少' }, [
+          h('div', { className: 'tb-row', key: 'n' }, [
+            h('span', { key: 'a', className: 'tb-kv' }, '读'),
+            h('input', { key: 'b', className: 'tb-input', type: 'number', style: { width: 70 }, value: c.readPerRound,
+              onChange: (e) => setCfg({ ...c, readPerRound: Number(e.target.value) }),
+              onBlur: () => saveCfg({ readPerRound: c.readPerRound }) }),
+            h('span', { key: 'c', className: 'tb-kv' }, '个楼，回'),
+            h('input', { key: 'd', className: 'tb-input', type: 'number', style: { width: 70 }, value: c.replyPerRound,
+              onChange: (e) => setCfg({ ...c, replyPerRound: Number(e.target.value) }),
+              onBlur: () => saveCfg({ replyPerRound: c.replyPerRound }) }),
+            h('span', { key: 'e', className: 'tb-kv' }, '条（默认读 5 回 1）'),
           ]),
         ]),
 
