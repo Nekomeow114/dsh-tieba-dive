@@ -77,6 +77,10 @@ dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll
 | `tieba_thread` | 读帖子楼层正文 |
 | `tieba_sign` | 签到（一天一次，幂等） |
 | `tieba_reply` | 回一条（必须 `confirm: true`，受每日上限/间隔/去重限制） |
+| `tieba_follow` | 关注一个吧（app 端签名接口，已关注则 `already: true`） |
+| `tieba_persona` | 读当前人设（设置页里写的，或指向的文件） |
+| `tieba_diary_write` | 写日记：`public` 给主人看 / `private` 私人 |
+| `tieba_diary_read` | 读日记：读 `private` 必须显式 `confirm: true` |
 
 ## 回帖的三道闸
 

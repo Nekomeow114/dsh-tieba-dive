@@ -15,6 +15,10 @@ import { defineTool as hostDefineTool } from './lib/toolkit.mjs'
 import * as tieba from './lib/tieba.js'
 import { readConfig, writeConfig, DEFAULTS } from './lib/config.mjs'
 import { freshState, writeState, audit, pruneSeen, today } from './lib/state.mjs'
+import { appendDiary, readDiary, diaryStats, diaryFile } from './lib/diary.mjs'
+import fs from 'node:fs'
+import path from 'node:path'
+import os from 'node:os'
 
 export const name = 'tieba-scroll'
 export const inject = ['webServer', 'tools', 'settings']
@@ -32,6 +36,19 @@ export const Config = !z ? undefined : z.object({
 })
 
 const log = (...a) => console.log('[tieba-duty]', ...a)
+
+/** 人设：file 优先，其次 text；都没有就返回空串（模型就用默认口吻） */
+function resolvePersona(cfg) {
+  const home = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
+  const f = String(cfg.personaFile || '').trim()
+  if (f) {
+    const abs = path.isAbsolute(f) ? f : path.join(home, 'tieba-duty', f)
+    try { return { source: abs, text: fs.readFileSync(abs, 'utf8').slice(0, 20000) } } catch {
+      return { source: abs, text: '', error: '人设文件读不到：' + abs }
+    }
+  }
+  return { source: '', text: String(cfg.personaText || '') }
+}
 
 export function apply(ctx, config = {}) {
   const cfgOf = () => readConfig(config)
@@ -76,6 +93,11 @@ export function apply(ctx, config = {}) {
             })
           }
           if (sub === '/config' && req.method === 'GET') return sendJson(res, 200, { ok: true, cfg })
+          if (sub === '/persona' && req.method === 'GET') return sendJson(res, 200, { ok: true, ...resolvePersona(cfg) })
+          if (sub === '/diary' && req.method === 'GET') {
+            const scope = new URL(req.url, 'http://127.0.0.1').searchParams.get('scope') || 'public'
+            return sendJson(res, 200, { ok: true, ...readDiary(scope), stats: diaryStats(), files: { public: diaryFile('public'), private: diaryFile('private') } })
+          }
           if (sub === '/config' && req.method === 'POST') {
             const patch = await readBody(req)
             return sendJson(res, 200, { ok: true, cfg: writeConfig(patch) })
@@ -89,7 +111,7 @@ export function apply(ctx, config = {}) {
           if (sub === '/sign' && req.method === 'POST') {
             const out = []
             for (const kw of cfg.bars) {
-              try { out.push(await tieba.sign(kw)) } catch (e) { out.push({ ok: false, kw, error: e.message }) }
+              try { out.push(await tieba.followAndSign(kw, { autoFollow: cfg.autoFollow })) } catch (e) { out.push({ ok: false, kw, error: e.message }) }
             }
             return sendJson(res, 200, { ok: true, results: out })
           }
@@ -110,6 +132,55 @@ export function apply(ctx, config = {}) {
     }
   }
   const json = (v) => JSON.stringify(v, null, 1)
+
+  tool({
+    name: 'tieba_follow',
+    description: '关注一个吧（走 app 端签名接口）。已经关注过则返回 already:true。',
+    parameters: { kw: { type: 'string', description: '吧名' } },
+    execute: async (args) => {
+      const kw = String(args.kw)
+      if (await tieba.isFollowing(kw)) return json({ ok: true, kw, already: true })
+      return json(await tieba.follow(kw))
+    },
+  })
+
+  tool({
+    name: 'tieba_persona',
+    description: '读当前的人设（设置页里写的，或指向的外部文件）。写日报/回帖前先读它，照着这个人设说话。',
+    parameters: {},
+    execute: async () => json(resolvePersona(cfgOf())),
+  })
+
+  tool({
+    name: 'tieba_diary_write',
+    description: '写日记。scope=public 是给主人看的日记；scope=private 是私人日记（只有主人手动翻开才看得到）。',
+    parameters: {
+      scope: { type: 'string', description: 'public 或 private' },
+      content: { type: 'string', description: '日记正文' },
+    },
+    execute: async (args) => {
+      if (!['public', 'private'].includes(String(args.scope))) return json({ ok: false, error: 'scope 只能是 public / private' })
+      return json(appendDiary(String(args.scope), String(args.content || '')))
+    },
+  })
+
+  tool({
+    name: 'tieba_diary_read',
+    description: '读日记。默认只读给主人看的那份；读私人日记必须显式 confirm: true（那是主人的私人内容）。',
+    parameters: {
+      scope: { type: 'string', description: 'public（默认）/ private' },
+      confirm: { type: 'boolean', description: '读 private 时必须传 true' },
+      lines: { type: 'number', description: '读最后多少行（默认 200）' },
+    },
+    execute: async (args) => {
+      const scope = String(args.scope || 'public')
+      if (scope === 'private' && args.confirm !== true) {
+        return json({ ok: false, error: '私人日记要主人点头：传 confirm: true 才能读' })
+      }
+      return json(readDiary(scope, { lines: Number(args.lines) || 200 }))
+    },
+  })
+
 
   tool({
     name: 'tieba_whoami',
@@ -159,7 +230,7 @@ export function apply(ctx, config = {}) {
       const bars = args.kw ? [String(args.kw)] : cfg.bars
       const out = []
       for (const kw of bars) {
-        try { out.push(await tieba.sign(kw)) } catch (e) { out.push({ ok: false, kw, error: e.message }) }
+        try { out.push(await tieba.followAndSign(kw, { autoFollow: cfg.autoFollow })) } catch (e) { out.push({ ok: false, kw, error: e.message }) }
       }
       return json(out)
     },

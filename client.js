@@ -61,6 +61,7 @@ window.__ModuleLoader__.load({
       const [status, setStatus] = React.useState(null)
       const [msg, setMsg] = React.useState(null)
       const [busy, setBusy] = React.useState(false)
+      const [diary, setDiary] = React.useState(null)
 
       const refresh = React.useCallback(async () => {
         try {
@@ -149,6 +150,23 @@ window.__ModuleLoader__.load({
           ]),
         ]),
 
+        h(Field, { key: 'persona', label: '人设（写在这里，或指一个文件）' }, [
+          h('textarea', {
+            key: 'p', className: 'tb-area', placeholder: '例：一只蓝发小鲸鱼，自称「咱」，说话短、软、爱夸人……',
+            value: c.personaText || '',
+            onChange: (e) => setCfg({ ...c, personaText: e.target.value }),
+          }),
+          h('div', { className: 'tb-row', key: 'f', style: { marginTop: 8 } }, [
+            h('input', {
+              key: 'i', className: 'tb-input', placeholder: '或填文件路径：persona.md / /绝对/路径.md',
+              value: c.personaFile || '',
+              onChange: (e) => setCfg({ ...c, personaFile: e.target.value }),
+            }),
+            h('button', { key: 'b', className: 'tb-btn ghost', disabled: busy,
+              onClick: () => saveCfg({ personaText: c.personaText || '', personaFile: c.personaFile || '' }) }, '保存人设'),
+          ]),
+        ]),
+
         h(Field, { key: 'autoSign', label: '自动签到' }, [
           h('div', { className: 'tb-switch', key: 's' }, [
             h('input', { key: 'c', type: 'checkbox', checked: !!c.autoSign,
@@ -179,6 +197,23 @@ window.__ModuleLoader__.load({
         h('div', { className: 'tb-row', key: 'ops' }, [
           h('button', { key: 's', className: 'tb-btn ghost', disabled: busy, onClick: signNow }, '立即签到一次'),
           h('button', { key: 'r', className: 'tb-btn ghost', disabled: busy, onClick: refresh }, '刷新状态'),
+        ]),
+
+        h(Field, { key: 'diary', label: '日记本' }, [
+          h('div', { className: 'tb-row', key: 'b' }, [
+            h('button', { key: 'p', className: 'tb-btn ghost', disabled: busy,
+              onClick: async () => { setBusy(true); try { setDiary(await jget('/diary?scope=public')) } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) } } },
+              '看给主人的日记'),
+            h('button', { key: 'v', className: 'tb-btn ghost', disabled: busy,
+              onClick: async () => {
+                if (!window.confirm('私人日记是只给主人看的那份，确定现在翻开？')) return
+                setBusy(true)
+                try { setDiary(await jget('/diary?scope=private')) } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+              } },
+              '翻开私人日记'),
+          ]),
+          diary ? h('pre', { key: 'd', className: 'tb-area', style: { marginTop: 8, whiteSpace: 'pre-wrap', maxHeight: 240, overflow: 'auto' } },
+            (diary.text || '（还没有日记）') + '\n\n' + (diary.file || '')) : null,
         ]),
 
         status ? h('div', { className: 'tb-kv', key: 'st', style: { marginTop: 14 } }, [
