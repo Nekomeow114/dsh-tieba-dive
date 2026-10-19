@@ -19,7 +19,7 @@ import { appendDiary, readDiary, diaryStats, diaryFile } from './lib/diary.mjs'
 import { writeReport, readReport, listReports, reportsDir } from './lib/reports.mjs'
 import { toneCheck } from './lib/tone.mjs'
 import { runRound, readLog, logFile } from './lib/runner.mjs'
-import { isValley, nextValley, peakLabel } from './lib/peak.mjs'
+import { isValley, nextValley, peakLabel, currentWindow } from './lib/peak.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
@@ -193,6 +193,8 @@ export function apply(ctx, config = {}) {
               busy: roundRunning || collecting,
               lastRunDate: st.lastRunDate || '',
               repliesToday: st.replies,
+              valley: { now: peakLabel(), isValley: isValley(), window: currentWindow(), next: nextValley()?.toISOString() || null },
+              runs: st.runs || {},
               log: logFile(),
             })
           }
@@ -422,6 +424,7 @@ export function apply(ctx, config = {}) {
       content: { type: 'string', description: '回复正文（4~400 字，别放链接）' },
       intent: { type: 'string', description: 'answer=解答疑问 / chat=接话 / share=分享看法 / joke=玩梗；默认 chat' },
       mention: { type: 'string', description: '要在回复里 @ 谁（贴吧昵称）；不传就用配置里的，空着就不 @' },
+      pid: { type: 'string', description: '要回复的楼层/评论 id（楼中楼）。需要设置里打开「允许回复楼中楼」' },
       confirm: { type: 'boolean', description: '必须显式传 true：表示用户已同意发出去' },
     },
     execute: async (args) => {
@@ -452,7 +455,11 @@ export function apply(ctx, config = {}) {
       const who = String(args.mention || (cfg.mentionEvery ? cfg.mention : '') || '').trim()
       let body = String(args.content || '').trim()
       if (who && !body.includes('@' + who)) body = body + ' @' + who + ' '
-      const r = await tieba.reply({ kw: String(args.kw), tid: String(args.tid), content: body })
+      const pid = String(args.pid || '').trim()
+      if (pid && !cfg.replySubthreads) {
+        return json({ ok: false, error: '这条是楼中楼回复，但设置里「允许回复楼中楼」是关的' })
+      }
+      const r = await tieba.reply({ kw: String(args.kw), tid: String(args.tid), content: body, pid })
       if (r.ok) {
         st.replies += 1
         st.lastReplyAt = Date.now()
@@ -469,16 +476,29 @@ export function apply(ctx, config = {}) {
   let collecting = false
   const maybeAutoRun = async () => {
     const cfg = cfgOf()
-    if (!cfg.autoRun || roundRunning || !tieba.hasCookie()) return
+    if ((!cfg.autoRun && !cfg.peakValley) || roundRunning || !tieba.hasCookie()) return
     const st = freshState()
-    if (st.lastRunDate === today()) return
-    if (new Date().getHours() < cfg.runHour) return
-    if (cfg.valleyOnly && !isValley()) { log('现在是高峰，等谷时再跑'); return }
+
+    if (cfg.peakValley) {
+      // 峰谷模式：落在哪个谷时窗口，就每个窗口跑一次（照刷B站：中午 / 晚上 各一个子开关）
+      const win = currentWindow()
+      if (!win) return
+      if (win === 'noon' && !cfg.noon) return
+      if (win === 'night' && !cfg.night) return
+      st.runs = st.runs || {}
+      if (st.runs[win] === today()) return
+      st.runs[win] = today()   // 先标记，失败也不至于一分钟一跑
+      writeState(st)
+    } else {
+      if (st.lastRunDate === today()) return
+      if (new Date().getHours() < cfg.runHour) return
+      if (cfg.valleyOnly && !isValley()) { log('现在是高峰，等谷时再跑'); return }
+    }
     roundRunning = true
     try {
       log(`自动跑一轮：profile=${cfg.headlessProfile}`)
       const r = await runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin })
-      if (r.ok) { const s2 = freshState(); s2.lastRunDate = today(); writeState(s2) }
+      if (r.ok) { const s2 = freshState(); s2.lastRunDate = today(); writeState(s2); log('一轮跑成功了') }
       log(`一轮结束：ok=${r.ok} code=${r.code ?? '-'} 日志=${r.log}`)
     } catch (e) {
       log(`跑一轮出错：${e?.message ?? e}`)
