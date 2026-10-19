@@ -17,3 +17,5 @@ jobs:
         run: node test/smoke.mjs
       - name: 纯函数闸门
         run: node test/gates.mjs
+      - name: 插件能挂载（工具 + 路由）
+        run: node test/apply.mjs

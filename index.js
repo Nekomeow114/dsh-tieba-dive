@@ -44,6 +44,14 @@ const log = (...a) => console.log('[tieba-duty]', ...a)
 export function apply(ctx, config = {}) {
   const cfgOf = () => readConfig(config)
 
+  const tool = (spec) => {
+    try { ctx.tools.register(hostDefineTool(spec)) } catch (e) {
+      log(`工具 ${spec.name} 没注册上（不影响别的）：${e?.message ?? e}`)
+    }
+  }
+  const json = (v) => JSON.stringify(v, null, 1)
+
+
   if (typeof ctx.settings?.register === 'function' && Config) {
     try { ctx.settings.register('tieba-duty', Config, { base: {}, applies: 'live' }) } catch (e) {
       log(`宿主设置项没挂上（不影响用）：${e?.message ?? e}`)
@@ -197,12 +205,6 @@ export function apply(ctx, config = {}) {
     log(`HTTP 路由没挂上：${e?.message ?? e}`)
   }
 
-  const tool = (spec) => {
-    try { ctx.tools.register(hostDefineTool(spec)) } catch (e) {
-      log(`工具 ${spec.name} 没注册上（不影响别的）：${e?.message ?? e}`)
-    }
-  }
-  const json = (v) => JSON.stringify(v, null, 1)
 
   tool({
     name: 'tieba_follow',
