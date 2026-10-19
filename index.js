@@ -111,7 +111,11 @@ export function apply(ctx, config = {}) {
           if (sub === '/sign' && req.method === 'POST') {
             const out = []
             for (const kw of cfg.bars) {
-              try { out.push(await tieba.followAndSign(kw, { autoFollow: cfg.autoFollow })) } catch (e) { out.push({ ok: false, kw, error: e.message }) }
+              try {
+          const r = await tieba.followAndSign(kw, { autoFollow: cfg.autoFollow })
+          if (r.ok) { const st = freshState(); st.signed[kw] = today(); writeState(st) }
+          out.push(r)
+        } catch (e) { out.push({ ok: false, kw, error: e.message }) }
             }
             return sendJson(res, 200, { ok: true, results: out })
           }
@@ -230,7 +234,11 @@ export function apply(ctx, config = {}) {
       const bars = args.kw ? [String(args.kw)] : cfg.bars
       const out = []
       for (const kw of bars) {
-        try { out.push(await tieba.followAndSign(kw, { autoFollow: cfg.autoFollow })) } catch (e) { out.push({ ok: false, kw, error: e.message }) }
+        try {
+          const r = await tieba.followAndSign(kw, { autoFollow: cfg.autoFollow })
+          if (r.ok) { const st = freshState(); st.signed[kw] = today(); writeState(st) }
+          out.push(r)
+        } catch (e) { out.push({ ok: false, kw, error: e.message }) }
       }
       return json(out)
     },
