@@ -118,7 +118,14 @@ window.__ModuleLoader__.load({
 
       React.useEffect(() => {
         let alive = true
-        const tick = async () => { try { const st = await jget('/run-status'); if (alive) setLive(st) } catch { /* 等接口 */ } }
+        let n = 0
+        const tick = async () => {
+          try {
+            const st = await jget('/run-status')
+            if (alive) setLive(st)
+            if (n++ % 5 === 0) { const s2 = await jget('/status'); if (alive && s2 && s2.cfg) { setStatus(s2); setCfg((cur) => cur || s2.cfg) } }
+          } catch { /* 等接口 */ }
+        }
         tick(); const t = setInterval(tick, 3000)
         return () => { alive = false; clearInterval(t) }
       }, [])

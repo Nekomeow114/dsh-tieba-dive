@@ -44,6 +44,10 @@ export const Config = !z ? undefined : z.object({
 const log = (...a) => console.log('[tieba-duty]', ...a)
 
 export function apply(ctx, config = {}) {
+  // ⚠️ headless 子进程里**不许**再起调度器：否则子进程里的插件又会触发定时器，
+  //    子子孙孙一直起（真机上真的发生了，日志里每 1~3 分钟一轮）。
+  const NO_SCHEDULE = process.env.TIEBA_DUTY_NO_SCHEDULE === '1'
+
   const cfgOf = () => {
     const c = readConfig(config)
     tieba.setGap(c.requestGapMs)
@@ -506,6 +510,10 @@ export function apply(ctx, config = {}) {
     if ((!cfg.autoRun && !cfg.peakValley) || roundRunning || !tieba.hasCookie()) return
     if (!cfg.bars || cfg.bars.length === 0) { log('没设置要刷的吧，跳过这一轮'); return }
     const st = freshState()
+    const COOLDOWN = 6 * 3600_000
+    if (st.lastRunAt && Date.now() - st.lastRunAt < COOLDOWN) {
+      return // 冷却中：兜底，防 runs 记录丢了导致连环触发
+    }
 
     if (cfg.peakValley) {
       // 峰谷模式：落在哪个谷时窗口，就每个窗口跑一次（照刷B站：中午 / 晚上 各一个子开关）
@@ -516,6 +524,7 @@ export function apply(ctx, config = {}) {
       st.runs = st.runs || {}
       if (st.runs[win] === today()) return
       st.runs[win] = today()   // 先标记，失败也不至于一分钟一跑
+      st.lastRunAt = Date.now()
       writeState(st)
     } else {
       if (st.lastRunDate === today()) return
@@ -524,6 +533,7 @@ export function apply(ctx, config = {}) {
     }
     roundRunning = true
     try {
+      const s0 = freshState(); s0.lastRunAt = Date.now(); writeState(s0)
       log(`自动跑一轮：profile=${cfg.headlessProfile}`)
       const r = await runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin })
       if (r.ok) { const s2 = freshState(); s2.lastRunDate = today(); writeState(s2); log('一轮跑成功了') }
@@ -532,8 +542,12 @@ export function apply(ctx, config = {}) {
       log(`跑一轮出错：${e?.message ?? e}`)
     } finally { roundRunning = false }
   }
-  const runTimer = setInterval(() => { maybeAutoRun().catch(() => {}) }, 60_000)
-  ctx.effect(() => () => clearInterval(runTimer), 'tieba-duty: 每日一轮定时器')
+  if (NO_SCHEDULE) {
+    log('在 headless 子进程里：不启动调度器（防自我复制）')
+  } else {
+    const runTimer = setInterval(() => { maybeAutoRun().catch(() => {}) }, 60_000)
+    ctx.effect(() => () => clearInterval(runTimer), 'tieba-duty: 每日一轮定时器')
+  }
 
   // ── 每天自动签到 ──────────────────────────────────────────────────────────
   const timer = setInterval(() => {
