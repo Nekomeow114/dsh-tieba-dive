@@ -99,6 +99,15 @@ $DSH_HOME/tieba-duty/
 npm test          # 离线单测：拿真实页面 fixture 跑解析器，不联网
 ```
 
+⚠️ **加 fixture 之前必须洗凭证**：贴吧页面里有一个「退出登录」链接，
+形如 `wappass.baidu.com/passport/?logout&sid=<BDUSS>&u=...` —— **整个 BDUSS 就在里面**。
+咱第一次提交就踩了（`git log` 里能看到修复），现在 `test/fixtures/*.html` 里的那一段已替换成 `REDACTED_BDUSS`。
+往仓库里贴任何抓下来的页面之前，先跑一遍：
+
+```bash
+grep -c "<你的 BDUSS 前 20 位>" test/fixtures/*.html   # 必须是 0
+```
+
 仓库结构：
 
 ```
