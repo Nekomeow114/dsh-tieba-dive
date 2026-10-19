@@ -230,6 +230,11 @@ window.__ModuleLoader__.load({
               onChange: (e) => saveCfg({ answerQuestions: e.target.checked }) }),
             h('span', { key: 't', className: 'tb-kv' }, '允许回帖里解答别人的疑问（关掉就只接话/共鸣/玩梗）'),
           ]),
+          h('div', { className: 'tb-switch', key: 'gate', style: { marginTop: 8 } }, [
+            h('input', { key: 'c', type: 'checkbox', checked: c.toneGate !== false,
+              onChange: (e) => saveCfg({ toneGate: e.target.checked }) }),
+            h('span', { key: 't', className: 'tb-kv' }, '拦客服腔（首先/其次/希望对你有帮助…），长短不限'),
+          ]),
           h('div', { className: 'tb-row', key: 'n', style: { marginTop: 8 } }, [
             h('span', { key: 'a', className: 'tb-kv' }, '每天最多'),
             h('input', { key: 'b', className: 'tb-input', type: 'number', style: { width: 70 }, value: c.replyPerDay,

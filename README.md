@@ -87,7 +87,8 @@ dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll
 
 ## 回帖的三道闸
 
-1. 设置里 `autoReply` 打开（默认关）；
+0. 设置里 `autoReply` 打开（默认关）；
+1. `toneGate`（默认开）：正文里出现「首先 / 其次 / 希望对你有帮助」这类客服腔会被退回改写，**长短不限**；
 2. 每天不超过 `replyPerDay` 条（默认 3）、两条之间至少 `replyGapSec` 秒（默认 30）；
 3. 同一个帖子一天只回一次，内容 4~400 字，不许重复。
 

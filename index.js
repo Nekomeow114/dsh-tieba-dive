@@ -37,6 +37,17 @@ export const Config = !z ? undefined : z.object({
 
 const log = (...a) => console.log('[tieba-duty]', ...a)
 
+/**
+ * 很轻的语气闸门：只拦「一眼客服」的词，不管句子长短。
+ * 命中了就退回让模型改写 —— 不改也能发（把 toneGate 关掉），但默认开着。
+ */
+const CLIENT_WORDS = ['首先', '其次', '综上所述', '综上', '总而言之', '希望对你有帮助',
+  '希望能帮到你', '如有疑问', '请随时', '建议您', '以上是', '此外']
+function toneCheck(text) {
+  const hit = CLIENT_WORDS.filter((w) => String(text).includes(w))
+  return hit
+}
+
 /** 人设：file 优先，其次 text；都没有就返回空串（模型就用默认口吻） */
 function resolvePersona(cfg) {
   const home = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
@@ -280,6 +291,12 @@ export function apply(ctx, config = {}) {
       }
       if (st.seen[`reply:${args.tid}`]) return json({ ok: false, error: '这个帖子今天已经回过了' })
 
+      if (cfg.toneGate) {
+        const hit = toneCheck(args.content)
+        if (hit.length) {
+          return json({ ok: false, error: `这句太像客服了（命中：${hit.join('、')}）—— 改成人话再发，长一点短一点都行` })
+        }
+      }
       const intent = String(args.intent || 'chat')
       if (intent === 'answer' && !cfg.answerQuestions) {
         return json({ ok: false, error: '这条是解答疑问，但配置里关掉了 —— 换个接话/共鸣的角度，或去设置页打开' })
