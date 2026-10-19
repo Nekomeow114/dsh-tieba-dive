@@ -50,7 +50,7 @@ ok(b.calls.tools.length >= 12, 'web：工具挂上', String(b.calls.tools.length
 
 // 必备工具
 for (const must of ['tieba_list', 'tieba_thread', 'tieba_reply', 'tieba_sign', 'tieba_follow',
-  'tieba_persona', 'tieba_settings', 'tieba_diary_write', 'tieba_report_write']) {
+  'tieba_persona', 'tieba_settings', 'tieba_diary_write', 'tieba_report_write', 'tieba_my_replies']) {
   ok(b.calls.tools.includes(must), '有工具 ' + must)
 }
 ok(mod.name === 'tieba-scroll', '插件名 tieba-scroll')

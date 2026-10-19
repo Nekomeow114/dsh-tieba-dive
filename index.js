@@ -65,6 +65,21 @@ export function apply(ctx, config = {}) {
   }
 
   tool({
+    name: 'tieba_my_replies',
+    description: '看自己最近回过哪些帖子（本地记录，不需要通知接口）。'
+      + '想知道有没有人接着回复你，拿这些 tid 去 tieba_thread 回读；楼中楼的具体接口贴吧没公开。',
+    parameters: { limit: { type: 'number', description: '最近几条（默认 20）' } },
+    execute: async (args) => {
+      const st = freshState()
+      const rows = Object.entries(st.replied || {})
+        .map(([tid, v]) => ({ tid, ...v }))
+        .sort((a, b) => (b.at || 0) - (a.at || 0))
+        .slice(0, Math.max(1, Math.min(Number(args.limit) || 20, 100)))
+      return json({ count: rows.length, rows })
+    },
+  })
+
+  tool({
     name: 'tieba_report_write',
     description: '写今天的日报（会覆盖同一天的文件）。路径：$DSH_HOME/tieba-duty/reports/YYYY-MM-DD.md',
     parameters: {
@@ -464,6 +479,8 @@ export function apply(ctx, config = {}) {
         st.replies += 1
         st.lastReplyAt = Date.now()
         st.seen[`reply:${args.tid}`] = Date.now()
+        st.replied = st.replied || {}
+        st.replied[String(args.tid)] = { kw: String(args.kw), at: Date.now(), content: body.slice(0, 200) }
         writeState(st)
         audit({ kind: 'reply', kw: args.kw, tid: args.tid, intent, mention: who, content: body, result: r })
       }
