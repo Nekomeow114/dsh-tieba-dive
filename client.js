@@ -63,6 +63,8 @@ window.__ModuleLoader__.load({
       const [busy, setBusy] = React.useState(false)
       const [diary, setDiary] = React.useState(null)
       const [cookieMsg, setCookieMsg] = React.useState(null)
+      const [round, setRound] = React.useState(null)
+      const [report, setReport] = React.useState(null)
 
       const refresh = React.useCallback(async () => {
         try {
@@ -117,6 +119,27 @@ window.__ModuleLoader__.load({
             : '✗ ' + x.kw + '：' + (x.error || x.msg || '失败'))
           setMsg({ ok: lines.length > 0 && lines.every((l) => l.charAt(0) === '✓'), text: lines.join('\n') || '没有可签到的吧' })
           await refresh()
+        } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+      }
+
+      const runRound = async () => {
+        setBusy(true); setMsg({ ok: true, text: '抓取中…（每读一个楼约 1~2 秒）' }); setRound(null)
+        try {
+          const r = await jpost('/run', {})
+          setRound(r)
+          const lines = (r.bars || []).map((b) => b.error
+            ? '✗ ' + b.kw + '：' + b.error
+            : '✓ ' + b.kw + '：读到 ' + b.read + ' 个楼（新帖 ' + b.fresh + ' 个）')
+          setMsg({ ok: (r.bars || []).every((b) => !b.error), text: lines.join('\n') + '\n\n原始数据：' + r.file })
+          await refresh()
+        } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+      }
+
+      const showReport = async () => {
+        setBusy(true)
+        try {
+          const r = await jget('/report?latest=1')
+          setReport(r.ok ? r : { text: r.error || '还没有日报' })
         } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
       }
 
@@ -250,6 +273,17 @@ window.__ModuleLoader__.load({
               onBlur: () => saveCfg({ replyGapSec: c.replyGapSec }) }),
             h('span', { key: 'e', className: 'tb-kv' }, '秒'),
           ]),
+        ]),
+
+        h(Field, { key: 'duty', label: '跑一轮 / 看日报' }, [
+          h('div', { className: 'tb-row', key: 'b' }, [
+            h('button', { key: 'r', className: 'tb-btn', disabled: busy, onClick: runRound }, '抓取一轮'),
+            h('button', { key: 'p', className: 'tb-btn ghost', disabled: busy, onClick: showReport }, '看最近日报'),
+          ]),
+          h('div', { key: 'h', className: 'tb-kv' },
+            '「抓取一轮」只采集（列帖 → 读 ' + (c.readPerRound || 5) + ' 个楼 → 存原始数据），不生成日报；日报由模型读原始数据后写。'),
+          report ? h('pre', { key: 'rp', className: 'tb-area', style: { marginTop: 8, whiteSpace: 'pre-wrap', maxHeight: 260, overflow: 'auto' } },
+            report.text || '（空）') : null,
         ]),
 
         h('div', { className: 'tb-row', key: 'ops' }, [

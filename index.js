@@ -16,7 +16,7 @@ import * as tieba from './lib/tieba.js'
 import { readConfig, writeConfig, DEFAULTS } from './lib/config.mjs'
 import { freshState, writeState, audit, pruneSeen, today } from './lib/state.mjs'
 import { appendDiary, readDiary, diaryStats, diaryFile } from './lib/diary.mjs'
-import { writeReport, readReport, listReports } from './lib/reports.mjs'
+import { writeReport, readReport, listReports, reportsDir } from './lib/reports.mjs'
 import { toneCheck } from './lib/tone.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -108,6 +108,43 @@ export function apply(ctx, config = {}) {
               signed: st.signed,
               cfg,
             })
+          }
+          if (sub === '/run' && req.method === 'POST') {
+            // 只采集、不生成：把这一轮读到的原始内容落成 raw-YYYY-MM-DD.json，模型再据此写日报
+            const st = freshState()
+            const cutoff = Date.now() - cfg.dedupeDays * 86400_000
+            const bars = []
+            for (const kw of cfg.bars) {
+              try {
+                const list = await tieba.listBar(kw)
+                const fresh = list.threads.filter((t) => !(Number(st.seen[`t:${t.id}`] || 0) > cutoff))
+                const picked = fresh.slice(0, cfg.readPerRound)
+                const threads = []
+                for (const t of picked) {
+                  try {
+                    const th = await tieba.readThread(t.id)
+                    threads.push({ id: t.id, title: th.title || t.title, reply: t.reply,
+                      floors: th.floors.slice(0, 4), images: th.images })
+                    st.seen[`t:${t.id}`] = Date.now()
+                  } catch (e) { threads.push({ id: t.id, title: t.title, error: e.message }) }
+                }
+                writeState(st)
+                bars.push({ kw, fid: list.fid, total: list.threads.length, fresh: fresh.length, threads })
+              } catch (e) { bars.push({ kw, error: e.message }) }
+            }
+            const at = new Date().toISOString()
+            const file = path.join(reportsDir(), `raw-${today()}.json`)
+            fs.mkdirSync(reportsDir(), { recursive: true })
+            fs.writeFileSync(file, JSON.stringify({ at, bars }, null, 1))
+            return sendJson(res, 200, {
+              ok: true, at, file,
+              bars: bars.map((b) => ({ kw: b.kw, fresh: b.fresh, read: (b.threads || []).length, error: b.error })),
+            })
+          }
+          if (sub === '/report' && req.method === 'GET') {
+            const u = new URL(req.url, 'http://127.0.0.1')
+            const latest = u.searchParams.get('latest') === '1'
+            return sendJson(res, 200, readReport({ latest, date: u.searchParams.get('date') || undefined }))
           }
           if (sub === '/config' && req.method === 'GET') return sendJson(res, 200, { ok: true, cfg })
           if (sub === '/persona' && req.method === 'GET') return sendJson(res, 200, { ok: true, ...resolvePersona(cfg) })

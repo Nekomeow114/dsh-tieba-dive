@@ -88,6 +88,14 @@ dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll
 | `tieba_diary_write` | 写日记：`public` 给主人看 / `private` 私人 |
 | `tieba_diary_read` | 读日记：读 `private` 必须显式 `confirm: true` |
 
+## 设置页上的两个按钮
+
+- **抓取一轮**：只采集——列帖 → 读 `readPerRound` 个楼 → 落成 `reports/raw-YYYY-MM-DD.json`
+  （含每楼的正文摘要和**图片链接**），不生成日报；
+- **看最近日报**：直接读 `reports/` 里最新那份。
+
+采集和生成分开：模型读原始数据再写日报，人可以随时看原始数据、判断它是不是在瞎编。
+
 ## 回帖的三道闸
 
 0. 设置里 `autoReply` 打开（默认关）；
