@@ -25,7 +25,9 @@ import path from 'node:path'
 import os from 'node:os'
 
 export const name = 'tieba-scroll'
-export const inject = ['webServer', 'tools', 'settings']
+// ⚠️ webServer 不能写进 inject：headless profile 没有这个服务，写进去整个插件会 pending，工具全不可用。
+// 这里只声明真正必需的，webServer 在 apply 里按需取。
+export const inject = ['tools', 'settings']
 
 let z
 try { z = (await import('@deepseek-ai/schemastery')).default } catch { z = null }
@@ -98,8 +100,14 @@ export function apply(ctx, config = {}) {
     req.on('end', () => { try { resolve(JSON.parse(b || '{}')) } catch { resolve({}) } })
   })
 
+  // 可选依赖：没 inject webServer 时不能直接读属性（Cordis 会抛），
+  // 先试 ctx.get（官方的「可选取服务」姿势），不行再兜一层属性访问。
+  let webServer
+  try { webServer = typeof ctx.get === 'function' ? ctx.get('webServer') : undefined } catch { webServer = undefined }
+  if (!webServer) { try { webServer = ctx.webServer } catch { webServer = undefined } }
   try {
-    ctx.effect(() => ctx.webServer.register({
+    if (!webServer) throw new Error('没有 webServer（headless 下正常）：跳过 HTTP 路由')
+    ctx.effect(() => webServer.register({
       kind: 'prefix',
       path: '/api/tieba-duty',
       handler: async (req, res) => {
@@ -156,8 +164,19 @@ export function apply(ctx, config = {}) {
           if (sub === '/run-headless' && req.method === 'POST') {
             if (roundRunning) return sendJson(res, 409, { ok: false, error: '已经有一轮在跑了' })
             roundRunning = true
-            const r = await runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin }).finally(() => { roundRunning = false })
-            return sendJson(res, 200, { ...r, hint: r.ok ? '跑完了，去「看最近日报」' : '没跑成，看运行日志（多半是 headless profile 里没装这个插件）' })
+            const logPath = logFile()
+            runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin })
+              .then((r) => log(`一轮结束：ok=${r.ok} code=${r.code ?? '-'}`))
+              .catch((e) => log(`一轮出错：${e?.message ?? e}`))
+              .finally(() => { roundRunning = false })
+            // 立刻返回：模型那一轮在后台跑，界面别挂着
+            return sendJson(res, 200, {
+              ok: true, started: true, log: logPath,
+              hint: '模型那一轮在后台跑（几分钟），跑完点「看最近日报」，中途可以「看运行日志」',
+            })
+          }
+          if (sub === '/run-status' && req.method === 'GET') {
+            return sendJson(res, 200, { ok: true, running: roundRunning, lastRunDate: freshState().lastRunDate || '', log: logFile() })
           }
           if (sub === '/logs' && req.method === 'GET') {
             return sendJson(res, 200, readLog({ date: new URL(req.url, 'http://127.0.0.1').searchParams.get('date') || undefined }))
