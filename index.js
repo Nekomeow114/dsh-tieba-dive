@@ -314,7 +314,11 @@ export function apply(ctx, config = {}) {
     name: 'tieba_persona',
     description: '读当前的人设（设置页里写的，或指向的外部文件）。写日报/回帖前先读它，照着这个人设说话。',
     parameters: {},
-    execute: async () => json(resolvePersona(cfgOf())),
+    execute: async () => {
+      const cfg = cfgOf()
+      const p = resolvePersona(cfg)
+      return json({ ...p, styleSamples: cfg.styleSamples || '' })
+    },
   })
 
   tool({
@@ -370,6 +374,9 @@ export function apply(ctx, config = {}) {
     execute: async (args) => {
       const cfg = cfgOf()
       const pages = Math.max(1, Math.min(Number(args.pages) || 1, 5))
+      if (!args.kw && (!cfg.bars || cfg.bars.length === 0)) {
+        return json({ ok: false, error: '还没设置要刷哪些吧：去设置页「① 账号」里填吧名（一行一个）' })
+      }
       const kw = String(args.kw || cfg.bars[0])
       const all = []
       let fid = ''
@@ -490,6 +497,7 @@ export function apply(ctx, config = {}) {
   const maybeAutoRun = async () => {
     const cfg = cfgOf()
     if ((!cfg.autoRun && !cfg.peakValley) || roundRunning || !tieba.hasCookie()) return
+    if (!cfg.bars || cfg.bars.length === 0) { log('没设置要刷的吧，跳过这一轮'); return }
     const st = freshState()
 
     if (cfg.peakValley) {

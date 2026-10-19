@@ -253,6 +253,8 @@ window.__ModuleLoader__.load({
             key: 'ba', className: 'tb-ta', value: (c.bars || []).join('\n'),
             onChange: (e) => setCfg({ ...c, bars: e.target.value.split('\n') }),
           }),
+          (!c.bars || c.bars.length === 0) ? h('div', { key: 'emp', className: 'tb-warn' },
+            '还没填任何吧。要刷哪些吧，必须由主人自己填——贴吧名字差一个字就白跑，所以默认不替主人猜。') : null,
           h('div', { key: 'br', className: 'tb-row' }, [
             h('button', { key: 'b', className: 'tb-btn ghost', disabled: busy,
               onClick: () => save({ bars: (c.bars || []).map((x) => x.trim()).filter(Boolean) }) }, '保存吧列表'),
@@ -295,6 +297,18 @@ window.__ModuleLoader__.load({
             h('button', { key: 'b', className: 'tb-btn ghost sm', disabled: busy,
               onClick: () => save({ personaText: c.personaText || '', personaFile: c.personaFile || '' }) }, '保存人设'),
             h('span', { key: 'k', className: 'tb-kv' }, '也可以填文件路径（优先于文本框）'),
+          ]),
+          h('div', { key: 'sl', className: 'tb-label' }, '语气样本（3~5 句，让回帖更像人）'),
+          h('textarea', {
+            key: 'ss', className: 'tb-ta', style: { minHeight: 84 },
+            placeholder: '例：\n「这书我也在看，节奏慢但挺上头」\n「哈？连这个都要问」\n「被你这么一说，我也有点想看了」',
+            value: c.styleSamples || '',
+            onChange: (e) => setCfg({ ...c, styleSamples: e.target.value }),
+          }),
+          h('div', { key: 'ssr', className: 'tb-row' }, [
+            h('button', { key: 'b', className: 'tb-btn ghost sm', disabled: busy,
+              onClick: () => save({ styleSamples: c.styleSamples || '' }) }, '保存语气样本'),
+            h('span', { key: 'k', className: 'tb-kv' }, '模型回帖前会读这几句，照着学长短和口气'),
           ]),
           h('input', { key: 'f', className: 'tb-in', style: { marginTop: 6 }, placeholder: 'persona.md 或 /绝对/路径.md',
             value: c.personaFile || '', onChange: (e) => setCfg({ ...c, personaFile: e.target.value }),
