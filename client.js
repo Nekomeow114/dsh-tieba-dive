@@ -322,8 +322,6 @@ window.__ModuleLoader__.load({
             text: '允许回帖里解答别人的疑问（关掉就只接话/共鸣/玩梗）' }),
           h(Sw, { key: 'gate', on: c.toneGate !== false, onChange: (v) => saveCfg({ toneGate: v }),
             text: '拦客服腔（首先/其次/希望对你有帮助…），长短不限' }),
-          h(Sw, { key: 'sub', on: c.replySubthreads === true, onChange: (v) => saveCfg({ replySubthreads: v }),
-            text: '允许回复自己楼层下的楼中楼（实验性：贴吧没有公开接口，可能失败）' }),
           h('div', { className: 'tb-row', key: 'm', style: { marginTop: 8 } }, [
             h('span', { key: 'a', className: 'tb-kv' }, '回复时 @'),
             h('input', { key: 'b', className: 'tb-input', style: { width: 160 }, placeholder: '贴吧昵称（留空不 @）',

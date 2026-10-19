@@ -439,7 +439,6 @@ export function apply(ctx, config = {}) {
       content: { type: 'string', description: '回复正文（4~400 字，别放链接）' },
       intent: { type: 'string', description: 'answer=解答疑问 / chat=接话 / share=分享看法 / joke=玩梗；默认 chat' },
       mention: { type: 'string', description: '要在回复里 @ 谁（贴吧昵称）；不传就用配置里的，空着就不 @' },
-      pid: { type: 'string', description: '要回复的楼层/评论 id（楼中楼）。需要设置里打开「允许回复楼中楼」' },
       confirm: { type: 'boolean', description: '必须显式传 true：表示用户已同意发出去' },
     },
     execute: async (args) => {
@@ -470,11 +469,7 @@ export function apply(ctx, config = {}) {
       const who = String(args.mention || (cfg.mentionEvery ? cfg.mention : '') || '').trim()
       let body = String(args.content || '').trim()
       if (who && !body.includes('@' + who)) body = body + ' @' + who + ' '
-      const pid = String(args.pid || '').trim()
-      if (pid && !cfg.replySubthreads) {
-        return json({ ok: false, error: '这条是楼中楼回复，但设置里「允许回复楼中楼」是关的' })
-      }
-      const r = await tieba.reply({ kw: String(args.kw), tid: String(args.tid), content: body, pid })
+      const r = await tieba.reply({ kw: String(args.kw), tid: String(args.tid), content: body })
       if (r.ok) {
         st.replies += 1
         st.lastReplyAt = Date.now()
