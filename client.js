@@ -130,7 +130,14 @@ window.__ModuleLoader__.load({
           const lines = (r.bars || []).map((b) => b.error
             ? '✗ ' + b.kw + '：' + b.error
             : '✓ ' + b.kw + '：读到 ' + b.read + ' 个楼（新帖 ' + b.fresh + ' 个）')
-          setMsg({ ok: (r.bars || []).every((b) => !b.error), text: lines.join('\n') + '\n\n原始数据：' + r.file })
+          let tail = '\n\n原始数据：' + r.file
+          const cc = cfg || {}
+          if (cc.autoReply && (cc.replyPerRound ?? 1) > 0) {
+            setMsg({ ok: true, text: lines.join('\n') + tail + '\n\n接着让模型跑一轮（写日报 + 回帖）…' })
+            const h = await jpost('/run-headless', {})
+            tail += '\n模型轮：' + (h.ok ? '跑完了' : '没跑成') + '（' + (h.hint || '') + '）\n日志：' + (h.log || '-')
+          }
+          setMsg({ ok: (r.bars || []).every((b) => !b.error), text: lines.join('\n') + tail })
           await refresh()
         } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
       }
@@ -228,13 +235,13 @@ window.__ModuleLoader__.load({
           h('div', { className: 'tb-row', key: 'n' }, [
             h('span', { key: 'a', className: 'tb-kv' }, '读'),
             h('input', { key: 'b', className: 'tb-input', type: 'number', style: { width: 70 }, value: c.readPerRound,
-              onChange: (e) => setCfg({ ...c, readPerRound: Number(e.target.value) }),
-              onBlur: () => saveCfg({ readPerRound: c.readPerRound }) }),
+              onChange: (e) => setCfg({ ...c, readPerRound: e.target.value }),
+              onBlur: () => saveCfg({ readPerRound: Number(c.readPerRound) }) }),
             h('span', { key: 'c', className: 'tb-kv' }, '个楼，回'),
             h('input', { key: 'd', className: 'tb-input', type: 'number', style: { width: 70 }, value: c.replyPerRound,
-              onChange: (e) => setCfg({ ...c, replyPerRound: Number(e.target.value) }),
-              onBlur: () => saveCfg({ replyPerRound: c.replyPerRound }) }),
-            h('span', { key: 'e', className: 'tb-kv' }, '条（默认读 5 回 1）'),
+              onChange: (e) => setCfg({ ...c, replyPerRound: e.target.value }),
+              onBlur: () => saveCfg({ replyPerRound: Number(c.replyPerRound) }) }),
+            h('span', { key: 'e', className: 'tb-kv' }, '条（默认读 5 贴、回 1 条）'),
           ]),
         ]),
 
@@ -277,23 +284,23 @@ window.__ModuleLoader__.load({
           h('div', { className: 'tb-row', key: 'n', style: { marginTop: 8 } }, [
             h('span', { key: 'a', className: 'tb-kv' }, '每天最多'),
             h('input', { key: 'b', className: 'tb-input', type: 'number', style: { width: 70 }, value: c.replyPerDay,
-              onChange: (e) => setCfg({ ...c, replyPerDay: Number(e.target.value) }),
-              onBlur: () => saveCfg({ replyPerDay: c.replyPerDay }) }),
+              onChange: (e) => setCfg({ ...c, replyPerDay: e.target.value }),
+              onBlur: () => saveCfg({ replyPerDay: Number(c.replyPerDay) }) }),
             h('span', { key: 'c', className: 'tb-kv' }, '条，间隔'),
             h('input', { key: 'd', className: 'tb-input', type: 'number', style: { width: 80 }, value: c.replyGapSec,
-              onChange: (e) => setCfg({ ...c, replyGapSec: Number(e.target.value) }),
-              onBlur: () => saveCfg({ replyGapSec: c.replyGapSec }) }),
+              onChange: (e) => setCfg({ ...c, replyGapSec: e.target.value }),
+              onBlur: () => saveCfg({ replyGapSec: Number(c.replyGapSec) }) }),
             h('span', { key: 'e', className: 'tb-kv' }, '秒'),
           ]),
         ]),
 
-        h(Field, { key: 'duty', label: '跑一轮 / 看日报' }, [
+        h(Field, { key: 'duty', label: '刷一轮 / 看日报' }, [
           h('div', { className: 'tb-row', key: 'b' }, [
-            h('button', { key: 'r', className: 'tb-btn', disabled: busy, onClick: runRound }, '抓取一轮'),
+            h('button', { key: 'r', className: 'tb-btn', disabled: busy, onClick: runRound }, '刷一轮贴吧'),
             h('button', { key: 'p', className: 'tb-btn ghost', disabled: busy, onClick: showReport }, '看最近日报'),
           ]),
           h('div', { key: 'h', className: 'tb-kv' },
-            '「抓取一轮」只采集（列帖 → 读 ' + (c.readPerRound || 5) + ' 个楼 → 存原始数据），不生成日报；日报由模型读原始数据后写。'),
+            '「刷一轮贴吧」：先按设置读 ' + (c.readPerRound || 5) + ' 个贴存原始数据；开了「允许回帖」时再让模型跑一轮（读原始数据 → 写日报 → 回 ' + (c.replyPerRound ?? 1) + ' 条）。'),
           report ? h('pre', { key: 'rp', className: 'tb-area', style: { marginTop: 8, whiteSpace: 'pre-wrap', maxHeight: 260, overflow: 'auto' } },
             report.text || '（空）') : null,
         ]),
