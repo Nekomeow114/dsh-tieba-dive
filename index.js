@@ -351,6 +351,7 @@ export function apply(ctx, config = {}) {
       tid: { type: 'string', description: '帖子 id' },
       content: { type: 'string', description: '回复正文（4~400 字，别放链接）' },
       intent: { type: 'string', description: 'answer=解答疑问 / chat=接话 / share=分享看法 / joke=玩梗；默认 chat' },
+      mention: { type: 'string', description: '要在回复里 @ 谁（贴吧昵称）；不传就用配置里的，空着就不 @' },
       confirm: { type: 'boolean', description: '必须显式传 true：表示用户已同意发出去' },
     },
     execute: async (args) => {
@@ -377,13 +378,17 @@ export function apply(ctx, config = {}) {
       if (intent === 'answer' && !cfg.answerQuestions) {
         return json({ ok: false, error: '这条是解答疑问，但配置里关掉了 —— 换个接话/共鸣的角度，或去设置页打开' })
       }
-      const r = await tieba.reply({ kw: String(args.kw), tid: String(args.tid), content: String(args.content) })
+      // @ 谁：参数优先，其次配置；配置里 mentionEvery 为真时才会自动带
+      const who = String(args.mention || (cfg.mentionEvery ? cfg.mention : '') || '').trim()
+      let body = String(args.content || '').trim()
+      if (who && !body.includes('@' + who)) body = body + ' @' + who + ' '
+      const r = await tieba.reply({ kw: String(args.kw), tid: String(args.tid), content: body })
       if (r.ok) {
         st.replies += 1
         st.lastReplyAt = Date.now()
         st.seen[`reply:${args.tid}`] = Date.now()
         writeState(st)
-        audit({ kind: 'reply', kw: args.kw, tid: args.tid, intent, content: args.content, result: r })
+        audit({ kind: 'reply', kw: args.kw, tid: args.tid, intent, mention: who, content: body, result: r })
       }
       return json(r)
     },

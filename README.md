@@ -116,6 +116,10 @@ dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll
 2. 每天不超过 `replyPerDay` 条（默认 3）、两条之间至少 `replyGapSec` 秒（默认 30）；
 3. 同一个帖子一天只回一次，内容 4~400 字，不许重复。
 
+另有可选的 `@`：设置页填「回复时 @ 谁」，或单次调用传 `mention`。
+贴吧的 @ 是**提醒别人**（格式 `@昵称 ` 跟空格），跟 B 站「@ 自己收通知」不是一回事；
+留空就不带，`mentionEvery` 控制是否每条都带。
+
 满一条都拒 —— 宁可少发，不发错。
 
 ## 数据都在哪

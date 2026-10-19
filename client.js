@@ -262,6 +262,18 @@ window.__ModuleLoader__.load({
               onChange: (e) => saveCfg({ toneGate: e.target.checked }) }),
             h('span', { key: 't', className: 'tb-kv' }, '拦客服腔（首先/其次/希望对你有帮助…），长短不限'),
           ]),
+          h('div', { className: 'tb-row', key: 'm', style: { marginTop: 8 } }, [
+            h('span', { key: 'a', className: 'tb-kv' }, '回复时 @'),
+            h('input', { key: 'b', className: 'tb-input', style: { width: 160 }, placeholder: '贴吧昵称（留空不 @）',
+              value: c.mention || '',
+              onChange: (e) => setCfg({ ...c, mention: e.target.value }),
+              onBlur: () => saveCfg({ mention: c.mention }) }),
+            h('label', { key: 'c', className: 'tb-kv', style: { display: 'flex', gap: 6, alignItems: 'center' } }, [
+              h('input', { key: 'i', type: 'checkbox', checked: !!c.mentionEvery,
+                onChange: (e) => saveCfg({ mentionEvery: e.target.checked }) }),
+              '每条都带',
+            ]),
+          ]),
           h('div', { className: 'tb-row', key: 'n', style: { marginTop: 8 } }, [
             h('span', { key: 'a', className: 'tb-kv' }, '每天最多'),
             h('input', { key: 'b', className: 'tb-input', type: 'number', style: { width: 70 }, value: c.replyPerDay,
