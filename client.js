@@ -272,6 +272,14 @@ window.__ModuleLoader__.load({
             h('input', { key: 'e', className: 'tb-num', type: 'number', ...num('requestGapMs') }),
             h('span', { key: 'f', className: 'tb-kv' }, 'ms'),
           ]),
+          h('div', { key: 'kw', className: 'tb-row' }, [
+            h('span', { key: 'a', className: 'tb-kv' }, '关键词'),
+            h('input', { key: 'b', className: 'tb-in', style: { flex: 1, minWidth: 160 },
+              placeholder: '逗号分隔，标题命中的排前面（可空）',
+              value: (c.keywords || []).join('，'),
+              onChange: (e) => setCfg({ ...c, keywords: e.target.value.split(/[，,]/) }),
+              onBlur: () => save({ keywords: (c.keywords || []).map((x) => String(x).trim()).filter(Boolean) }) }),
+          ]),
           h('div', { key: 'o', className: 'tb-row' }, [
             h('button', { key: 'r', className: 'tb-btn', disabled: busy || running, onClick: runRound },
               live && live.collecting ? '采集中…' : (live && live.running ? '模型轮进行中…' : '刷一轮贴吧')),

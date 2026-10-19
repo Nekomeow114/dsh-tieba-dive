@@ -392,8 +392,15 @@ export function apply(ctx, config = {}) {
         const seenAt = Number(st.seen[`t:${t.id}`] || 0)
         return { ...t, seen: seenAt > cutoff }
       })
-      const fresh = marked.filter((t) => !t.seen)
-      const threads = (args.onlyFresh === true ? fresh : marked).slice(0, 120)
+      // 关键词：标题命中的排前面（keywords 以前是死配置，这里接上）
+      const kws = (cfg.keywords || []).map((k) => String(k).trim()).filter(Boolean)
+      const withHit = marked.map((t) => ({
+        ...t,
+        matched: kws.filter((k) => t.title.includes(k)),
+      }))
+      withHit.sort((a, b) => (b.matched.length - a.matched.length) || (a.seen - b.seen))
+      const fresh = withHit.filter((t) => !t.seen)
+      const threads = (args.onlyFresh === true ? fresh : withHit).slice(0, 120)
       return json({ kw, fid, count: all.length, fresh: fresh.length, threads })
     },
   })
