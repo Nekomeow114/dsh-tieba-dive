@@ -16,6 +16,8 @@ import * as tieba from './lib/tieba.js'
 import { readConfig, writeConfig, DEFAULTS } from './lib/config.mjs'
 import { freshState, writeState, audit, pruneSeen, today } from './lib/state.mjs'
 import { appendDiary, readDiary, diaryStats, diaryFile } from './lib/diary.mjs'
+import { writeReport, readReport, listReports } from './lib/reports.mjs'
+import { toneCheck } from './lib/tone.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
@@ -37,30 +39,6 @@ export const Config = !z ? undefined : z.object({
 
 const log = (...a) => console.log('[tieba-duty]', ...a)
 
-/**
- * 很轻的语气闸门：只拦「一眼客服」的词，不管句子长短。
- * 命中了就退回让模型改写 —— 不改也能发（把 toneGate 关掉），但默认开着。
- */
-const CLIENT_WORDS = ['首先', '其次', '综上所述', '综上', '总而言之', '希望对你有帮助',
-  '希望能帮到你', '如有疑问', '请随时', '建议您', '以上是', '此外']
-function toneCheck(text) {
-  const hit = CLIENT_WORDS.filter((w) => String(text).includes(w))
-  return hit
-}
-
-/** 人设：file 优先，其次 text；都没有就返回空串（模型就用默认口吻） */
-function resolvePersona(cfg) {
-  const home = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
-  const f = String(cfg.personaFile || '').trim()
-  if (f) {
-    const abs = path.isAbsolute(f) ? f : path.join(home, 'tieba-duty', f)
-    try { return { source: abs, text: fs.readFileSync(abs, 'utf8').slice(0, 20000) } } catch {
-      return { source: abs, text: '', error: '人设文件读不到：' + abs }
-    }
-  }
-  return { source: '', text: String(cfg.personaText || '') }
-}
-
 export function apply(ctx, config = {}) {
   const cfgOf = () => readConfig(config)
 
@@ -69,6 +47,34 @@ export function apply(ctx, config = {}) {
       log(`宿主设置项没挂上（不影响用）：${e?.message ?? e}`)
     }
   }
+
+  tool({
+    name: 'tieba_report_write',
+    description: '写今天的日报（会覆盖同一天的文件）。路径：$DSH_HOME/tieba-duty/reports/YYYY-MM-DD.md',
+    parameters: {
+      content: { type: 'string', description: '整份日报的 markdown' },
+      date: { type: 'string', description: 'YYYY-MM-DD（默认今天）' },
+    },
+    execute: async (args) => json(writeReport(String(args.content || ''), { date: args.date })),
+  })
+
+  tool({
+    name: 'tieba_report_read',
+    description: '读日报。默认读今天的；latest:true 读最近一份；也可以指定 date。',
+    parameters: {
+      date: { type: 'string', description: 'YYYY-MM-DD' },
+      latest: { type: 'boolean', description: '读最近一份' },
+      lines: { type: 'number', description: '读最后多少行（默认 400）' },
+    },
+    execute: async (args) => json(readReport({ date: args.date, latest: args.latest === true, lines: Number(args.lines) || 400 })),
+  })
+
+  tool({
+    name: 'tieba_reports',
+    description: '列出已有的日报（日期 / 大小）。',
+    parameters: {},
+    execute: async () => json(listReports()),
+  })
 
   // ── HTTP（设置页用）────────────────────────────────────────────────────────
   const sendJson = (res, code, obj) => {
@@ -221,6 +227,7 @@ export function apply(ctx, config = {}) {
     parameters: {
       kw: { type: 'string', description: '吧名，例如 deepseek' },
       pages: { type: 'number', description: '抓几页（每页 50 条，默认 1）' },
+      onlyFresh: { type: 'boolean', description: '只返回没读过的（默认 false）' },
     },
     execute: async (args) => {
       const cfg = cfgOf()
@@ -233,7 +240,16 @@ export function apply(ctx, config = {}) {
         fid = fid || r.fid
         all.push(...r.threads)
       }
-      return json({ kw, fid, count: all.length, threads: all.slice(0, 120) })
+      // 标上「读过没」：读过的排后面，日报里别再推一遍
+      const st = freshState()
+      const cutoff = Date.now() - cfg.dedupeDays * 86400_000
+      const marked = all.map((t) => {
+        const seenAt = Number(st.seen[`t:${t.id}`] || 0)
+        return { ...t, seen: seenAt > cutoff }
+      })
+      const fresh = marked.filter((t) => !t.seen)
+      const threads = (args.onlyFresh === true ? fresh : marked).slice(0, 120)
+      return json({ kw, fid, count: all.length, fresh: fresh.length, threads })
     },
   })
 
@@ -244,7 +260,17 @@ export function apply(ctx, config = {}) {
       tid: { type: 'string', description: '帖子 id（数字）' },
       pn: { type: 'number', description: '第几页（默认 1）' },
     },
-    execute: async (args) => json(await tieba.readThread(String(args.tid), { pn: Number(args.pn) || 1 })),
+    execute: async (args) => {
+      const tid = String(args.tid)
+      const r = await tieba.readThread(tid, { pn: Number(args.pn) || 1 })
+      try {
+        const st = freshState()
+        const seenBefore = Boolean(st.seen[`t:${tid}`])
+        st.seen[`t:${tid}`] = Date.now()
+        writeState(st)
+        return json({ ...r, seenBefore })
+      } catch { return json(r) }
+    },
   })
 
   tool({

@@ -81,6 +81,9 @@ dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll
 | `tieba_reply` | 回一条（必须 `confirm: true`，受每日上限/间隔/去重限制） |
 | `tieba_follow` | 关注一个吧（app 端签名接口，已关注则 `already: true`） |
 | `tieba_settings` | 看当前配置（吧列表 / 每轮读几条回几条 / 各开关） |
+| `tieba_report_write` | 写当天日报（`reports/YYYY-MM-DD.md`） |
+| `tieba_report_read` | 读日报（今天 / 最近一份 / 指定日期） |
+| `tieba_reports` | 列出已有日报 |
 | `tieba_persona` | 读当前人设（设置页里写的，或指向的文件） |
 | `tieba_diary_write` | 写日记：`public` 给主人看 / `private` 私人 |
 | `tieba_diary_read` | 读日记：读 `private` 必须显式 `confirm: true` |
@@ -100,8 +103,9 @@ dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll
 $DSH_HOME/tieba-duty/
 ├─ cookie.txt      # BDUSS（600）
 ├─ state.json      # 今天回了几条 / 签到记录 / 已读去重
-├─ audit.jsonl     # 每次回帖留痕（发了什么、结果如何）
-└─ reports/        # 日报
+├─ audit.jsonl     # 每次回帖留痕（发了什么、意图、结果）
+├─ diary/          # 日记（public.md / private.md）
+└─ reports/        # 日报（YYYY-MM-DD.md）
 ```
 
 卸载插件不会删这些。
@@ -109,7 +113,8 @@ $DSH_HOME/tieba-duty/
 ## 开发
 
 ```bash
-npm test          # 离线单测：拿真实页面 fixture 跑解析器，不联网
+npm test          # = smoke（解析器）+ gates（闸门/配置/日报/状态），全部离线
+npm run test:gates
 ```
 
 ⚠️ **加 fixture 之前必须洗凭证**：贴吧页面里有一个「退出登录」链接，

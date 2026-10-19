@@ -27,7 +27,8 @@
 
 ## 4. 日报
 
-写进 `$DSH_HOME/tieba-duty/reports/YYYY-MM-DD.md`：
+用 `tieba_report_write` 写（不要自己拼路径）。`tieba_list` 返回里 `seen: true` 的是读过的，
+日报里别再推一遍；`fresh` 是这一批里没读过的数量。
 
 ```markdown
 # 贴吧日报 · YYYY-MM-DD
