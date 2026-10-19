@@ -282,7 +282,7 @@ window.__ModuleLoader__.load({
             ]),
           ]),
           h('div', { className: 'tb-row', key: 'n', style: { marginTop: 8 } }, [
-            h('span', { key: 'a', className: 'tb-kv' }, '每天最多'),
+            h('span', { key: 'a', className: 'tb-kv' }, '全天合计最多'),
             h('input', { key: 'b', className: 'tb-input', type: 'number', style: { width: 70 }, value: c.replyPerDay,
               onChange: (e) => setCfg({ ...c, replyPerDay: e.target.value }),
               onBlur: () => saveCfg({ replyPerDay: Number(c.replyPerDay) }) }),
@@ -292,6 +292,11 @@ window.__ModuleLoader__.load({
               onBlur: () => saveCfg({ replyGapSec: Number(c.replyGapSec) }) }),
             h('span', { key: 'e', className: 'tb-kv' }, '秒'),
           ]),
+          h('div', { key: 'rel', className: 'tb-kv', style: { marginTop: 6 } },
+            '按现在这两组数：一轮最多回 ' + (c.replyPerRound ?? 1) + ' 条，全天合计最多 '
+            + (c.replyPerDay ?? 3) + ' 条'
+            + ((c.replyPerRound ?? 1) > (c.replyPerDay ?? 3)
+              ? ' —— ⚠️ 一轮额度比全天还大，第二轮会被全天上限拦下' : '。')),
         ]),
 
         h(Field, { key: 'duty', label: '刷一轮 / 看日报' }, [

@@ -1,6 +1,6 @@
 {
   "name": "dsh-tieba-scroll",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "DSH 插件 · 刷贴吧：每天替你刷几个百度贴吧，读帖挑值得看的、写日报；可选签到与回帖（默认关，带意图与语气闸门）。支持人设与日记本。",
   "keywords": [
     "dsh",
