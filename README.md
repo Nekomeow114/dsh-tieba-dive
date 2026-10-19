@@ -1,5 +1,9 @@
 # dsh-tieba-scroll · 刷贴吧
 
+> ⚠️ **非官方接口**：本插件走贴吧手机版页面（逆向解析），不是官方 API。
+> 贴吧改版可能失效、频繁请求可能触发风控。账号风险、发出去的内容，都由使用者自己承担。
+
+
 [![test](https://github.com/Nekomeow114/dsh-tieba-scroll/actions/workflows/test.yml/badge.svg)](https://github.com/Nekomeow114/dsh-tieba-scroll/actions/workflows/test.yml)
 [![npm](https://img.shields.io/npm/v/dsh-tieba-scroll.svg)](https://www.npmjs.com/package/dsh-tieba-scroll)
 
