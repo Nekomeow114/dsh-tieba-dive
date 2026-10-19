@@ -66,5 +66,14 @@
   },
   "peerDependencies": {
     "@deepseek-ai/schemastery": "*"
-  }
+  },
+  "homepage": "https://github.com/Nekomeow114/dsh-tieba-scroll#readme",
+  "bugs": {
+    "url": "https://github.com/Nekomeow114/dsh-tieba-scroll/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "author": "Nekomeow114"
 }

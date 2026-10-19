@@ -1,5 +1,8 @@
 # dsh-tieba-scroll · 刷贴吧
 
+[![test](https://github.com/Nekomeow114/dsh-tieba-scroll/actions/workflows/test.yml/badge.svg)](https://github.com/Nekomeow114/dsh-tieba-scroll/actions/workflows/test.yml)
+[![npm](https://img.shields.io/npm/v/dsh-tieba-scroll.svg)](https://www.npmjs.com/package/dsh-tieba-scroll)
+
 > DSH 插件：每天替你看几个百度贴吧 —— 读帖、挑值得看的、写一份日报；
 > 可选「签到」和「回帖」（**默认都是关的**，回帖还有每日条数 / 间隔 / 去重三道闸）。
 
@@ -39,9 +42,8 @@ cookie 从 jar 文件读、**不进 argv**（`ps` 里看不到）。
 ## 安装
 
 ```bash
-dsh plugin --profile web add dsh-tieba-scroll     # npm 发布后
-# 或者直接从仓库装：
-dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll
+dsh plugin --profile web add dsh-tieba-scroll                    # npm
+dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll # 或直接从仓库装
 ```
 
 装完**重启一次 DSH**（bundle 要重新组装）。
