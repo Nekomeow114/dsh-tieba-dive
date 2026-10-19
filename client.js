@@ -312,13 +312,17 @@ window.__ModuleLoader__.load({
             h('span', { key: 'f', className: 'tb-kv' }, 'ms'),
           ]),
           h('div', { key: 'kw', className: 'tb-row' }, [
-            h('span', { key: 'a', className: 'tb-kv' }, '关键词'),
+            h('span', { key: 'a', className: 'tb-kv', style: { minWidth: 76 } }, '刷帖关键词'),
             h('input', { key: 'b', className: 'tb-in', style: { flex: 1, minWidth: 160 },
-              placeholder: '可空，逗号分隔',
+              placeholder: '可空。例：大肥鱼，人设，推书',
               value: (c.keywords || []).join('，'),
               onChange: (e) => setCfg({ ...c, keywords: e.target.value.split(/[，,]/) }),
               onBlur: () => save({ keywords: (c.keywords || []).map((x) => String(x).trim()).filter(Boolean) }) }),
           ]),
+          h('div', { key: 'kwh', className: 'tb-kv', style: { marginTop: -2 } },
+            (c.keywords && c.keywords.length)
+              ? '标题里带这些词的帖会排在前面、日报优先写；不带词的帖照常读，只是排后面。'
+              : '留空 = 不挑，按吧里默认顺序读。填了之后，标题带这些词的帖会排前面、日报优先写（不是过滤，别的帖照读）。'),
           h('div', { key: 'o', className: 'tb-row' }, [
             h('button', { key: 'r', className: 'tb-btn', disabled: busy || running, onClick: runRound },
               live && live.collecting ? '采集中…' : (live && live.running ? '模型轮进行中…' : '刷一轮贴吧')),
