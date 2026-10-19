@@ -19,6 +19,7 @@ import { appendDiary, readDiary, diaryStats, diaryFile } from './lib/diary.mjs'
 import { writeReport, readReport, listReports, reportsDir } from './lib/reports.mjs'
 import { toneCheck } from './lib/tone.mjs'
 import { runRound, readLog, logFile } from './lib/runner.mjs'
+import { isValley, nextValley, peakLabel } from './lib/peak.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
@@ -107,6 +108,8 @@ export function apply(ctx, config = {}) {
               today: today(),
               repliesToday: st.replies,
               signed: st.signed,
+              valley: { now: peakLabel(), isValley: isValley(), next: nextValley()?.toISOString() || null },
+              lastRunDate: st.lastRunDate || '',
               cfg,
             })
           }
@@ -394,6 +397,7 @@ export function apply(ctx, config = {}) {
     const st = freshState()
     if (st.lastRunDate === today()) return
     if (new Date().getHours() < cfg.runHour) return
+    if (cfg.valleyOnly && !isValley()) { log('现在是高峰，等谷时再跑'); return }
     roundRunning = true
     try {
       log(`自动跑一轮：profile=${cfg.headlessProfile}`)
