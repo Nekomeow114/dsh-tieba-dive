@@ -111,7 +111,8 @@ window.__ModuleLoader__.load({
         try {
           const r = await jpost('/sign', {})
           const lines = (r.results || []).map((x) => x.ok
-            ? '✓ ' + x.kw + '：签到成功（累计 ' + (x.count == null ? '?' : x.count) + ' 天）'
+            ? '✓ ' + x.kw + '：签到成功' + (x.count == null ? '' : '（累计 ' + x.count + ' 天）')
+              + (x.followed && !x.wasFollowing ? ' · 顺手关注了这个吧' : '')
             : '✗ ' + x.kw + '：' + (x.error || x.msg || '失败'))
           setMsg({ ok: lines.length > 0 && lines.every((l) => l.charAt(0) === '✓'), text: lines.join('\n') || '没有可签到的吧' })
           await refresh()
@@ -203,14 +204,14 @@ window.__ModuleLoader__.load({
           h('div', { className: 'tb-row', key: 'b' }, [
             h('button', { key: 'p', className: 'tb-btn ghost', disabled: busy,
               onClick: async () => { setBusy(true); try { setDiary(await jget('/diary?scope=public')) } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) } } },
-              '看给主人的日记'),
+              '看大肥鱼写给主人的日记'),
             h('button', { key: 'v', className: 'tb-btn ghost', disabled: busy,
               onClick: async () => {
-                if (!window.confirm('私人日记是只给主人看的那份，确定现在翻开？')) return
+                if (!window.confirm('这是大肥鱼的私人日记……\n\n只有主人能看。确定现在翻开吗？')) return
                 setBusy(true)
                 try { setDiary(await jget('/diary?scope=private')) } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
               } },
-              '翻开私人日记'),
+              '翻开私人日记（有点害羞）'),
           ]),
           diary ? h('pre', { key: 'd', className: 'tb-area', style: { marginTop: 8, whiteSpace: 'pre-wrap', maxHeight: 240, overflow: 'auto' } },
             (diary.text || '（还没有日记）') + '\n\n' + (diary.file || '')) : null,
