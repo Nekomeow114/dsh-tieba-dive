@@ -263,6 +263,7 @@ export function apply(ctx, config = {}) {
       kw: { type: 'string', description: '吧名' },
       tid: { type: 'string', description: '帖子 id' },
       content: { type: 'string', description: '回复正文（4~400 字，别放链接）' },
+      intent: { type: 'string', description: 'answer=解答疑问 / chat=接话 / share=分享看法 / joke=玩梗；默认 chat' },
       confirm: { type: 'boolean', description: '必须显式传 true：表示用户已同意发出去' },
     },
     execute: async (args) => {
@@ -279,13 +280,17 @@ export function apply(ctx, config = {}) {
       }
       if (st.seen[`reply:${args.tid}`]) return json({ ok: false, error: '这个帖子今天已经回过了' })
 
+      const intent = String(args.intent || 'chat')
+      if (intent === 'answer' && !cfg.answerQuestions) {
+        return json({ ok: false, error: '这条是解答疑问，但配置里关掉了 —— 换个接话/共鸣的角度，或去设置页打开' })
+      }
       const r = await tieba.reply({ kw: String(args.kw), tid: String(args.tid), content: String(args.content) })
       if (r.ok) {
         st.replies += 1
         st.lastReplyAt = Date.now()
         st.seen[`reply:${args.tid}`] = Date.now()
         writeState(st)
-        audit({ kind: 'reply', kw: args.kw, tid: args.tid, content: args.content, result: r })
+        audit({ kind: 'reply', kw: args.kw, tid: args.tid, intent, content: args.content, result: r })
       }
       return json(r)
     },

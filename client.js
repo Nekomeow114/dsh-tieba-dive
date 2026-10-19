@@ -225,6 +225,11 @@ window.__ModuleLoader__.load({
               onChange: (e) => saveCfg({ autoReply: e.target.checked }) }),
             h('span', { key: 't', className: 'tb-kv' }, '⚠️ 打开后，模型可以在你确认下用这个号发公开回复'),
           ]),
+          h('div', { className: 'tb-switch', key: 'qa', style: { marginTop: 8 } }, [
+            h('input', { key: 'c', type: 'checkbox', checked: c.answerQuestions !== false,
+              onChange: (e) => saveCfg({ answerQuestions: e.target.checked }) }),
+            h('span', { key: 't', className: 'tb-kv' }, '允许回帖里解答别人的疑问（关掉就只接话/共鸣/玩梗）'),
+          ]),
           h('div', { className: 'tb-row', key: 'n', style: { marginTop: 8 } }, [
             h('span', { key: 'a', className: 'tb-kv' }, '每天最多'),
             h('input', { key: 'b', className: 'tb-input', type: 'number', style: { width: 70 }, value: c.replyPerDay,
