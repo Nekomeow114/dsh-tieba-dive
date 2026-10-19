@@ -136,6 +136,8 @@ export function apply(ctx, config = {}) {
             })
           }
           if (sub === '/run' && req.method === 'POST') {
+            if (collecting || roundRunning) return sendJson(res, 409, { ok: false, error: '已经有一轮在跑了' })
+            collecting = true
             // 只采集、不生成：把这一轮读到的原始内容落成 raw-YYYY-MM-DD.json，模型再据此写日报
             const st = freshState()
             const cutoff = Date.now() - cfg.dedupeDays * 86400_000
@@ -162,6 +164,7 @@ export function apply(ctx, config = {}) {
             const file = path.join(reportsDir(), `raw-${today()}.json`)
             fs.mkdirSync(reportsDir(), { recursive: true })
             fs.writeFileSync(file, JSON.stringify({ at, bars }, null, 1))
+            collecting = false
             return sendJson(res, 200, {
               ok: true, at, file,
               bars: bars.map((b) => ({ kw: b.kw, fresh: b.fresh, read: (b.threads || []).length, error: b.error })),
@@ -182,7 +185,16 @@ export function apply(ctx, config = {}) {
             })
           }
           if (sub === '/run-status' && req.method === 'GET') {
-            return sendJson(res, 200, { ok: true, running: roundRunning, lastRunDate: freshState().lastRunDate || '', log: logFile() })
+            const st = freshState()
+            return sendJson(res, 200, {
+              ok: true,
+              running: roundRunning,
+              collecting,
+              busy: roundRunning || collecting,
+              lastRunDate: st.lastRunDate || '',
+              repliesToday: st.replies,
+              log: logFile(),
+            })
           }
           if (sub === '/logs' && req.method === 'GET') {
             return sendJson(res, 200, readLog({ date: new URL(req.url, 'http://127.0.0.1').searchParams.get('date') || undefined }))
@@ -221,6 +233,7 @@ export function apply(ctx, config = {}) {
           }
           return sendJson(res, 404, { ok: false, error: `unknown ${req.method} ${sub}` })
         } catch (e) {
+          collecting = false
           return sendJson(res, 500, { ok: false, error: e?.message ?? String(e) })
         }
       },
@@ -453,6 +466,7 @@ export function apply(ctx, config = {}) {
 
   // ── 每天自动跑一轮（默认关）──────────────────────────────────────────────
   let roundRunning = false
+  let collecting = false
   const maybeAutoRun = async () => {
     const cfg = cfgOf()
     if (!cfg.autoRun || roundRunning || !tieba.hasCookie()) return

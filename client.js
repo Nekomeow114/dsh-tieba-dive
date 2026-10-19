@@ -84,6 +84,20 @@ window.__ModuleLoader__.load({
       }, [])
       React.useEffect(() => { refresh() }, [refresh])
 
+      // 每 3 秒问一次后端：采集/模型轮到底在不在跑（关掉面板再回来也接得上）
+      React.useEffect(() => {
+        let alive = true
+        const tick = async () => {
+          try {
+            const st = await jget('/run-status')
+            if (alive) setLive(st)
+          } catch { /* 接口还没挂上时不打扰 */ }
+        }
+        tick()
+        const t = setInterval(tick, 3000)
+        return () => { alive = false; clearInterval(t) }
+      }, [])
+
       const saveCookie = async () => {
         if (!cookie.trim()) { setMsg({ ok: false, text: '先粘贴 BDUSS（带不带前缀都行）' }); return }
         if (/^(ssh-|-----BEGIN)/i.test(cookie.trim())) {
@@ -308,9 +322,15 @@ window.__ModuleLoader__.load({
 
         h(Field, { key: 'duty', label: '刷一轮 / 看日报' }, [
           h('div', { className: 'tb-row', key: 'b' }, [
-            h('button', { key: 'r', className: 'tb-btn', disabled: busy, onClick: runRound }, '刷一轮贴吧'),
+            h('button', { key: 'r', className: 'tb-btn', disabled: busy || !!live?.busy, onClick: runRound },
+              live?.collecting ? '采集中…' : (live?.running ? '模型轮进行中…' : '刷一轮贴吧')),
             h('button', { key: 'p', className: 'tb-btn ghost', disabled: busy, onClick: showReport }, '看最近日报'),
           ]),
+          h('div', { key: 'live', className: 'tb-kv', style: { marginTop: 6 } },
+            !live ? '状态：读取中…'
+              : live.busy
+                ? '状态：' + (live.collecting ? '正在采集帖子…' : '模型轮进行中…') + '（退出面板也会继续跑）'
+                : '状态：空闲' + (live.lastRunDate ? '（上次跑完：' + live.lastRunDate + '）' : '')),
           h('div', { key: 'h', className: 'tb-kv' },
             '「刷一轮贴吧」：先按设置读 ' + (c.readPerRound || 5) + ' 个贴存原始数据；开了「允许回帖」时再让模型跑一轮（读原始数据 → 写日报 → 回 ' + (c.replyPerRound ?? 1) + ' 条）。'),
           report ? h('pre', { key: 'rp', className: 'tb-area', style: { marginTop: 8, whiteSpace: 'pre-wrap', maxHeight: 260, overflow: 'auto' } },
