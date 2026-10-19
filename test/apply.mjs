@@ -57,5 +57,14 @@ ok(mod.name === 'tieba-scroll', '插件名 tieba-scroll')
 ok(mod.inject.includes('tools') && mod.inject.includes('settings'), 'inject 带 tools/settings')
 ok(!mod.inject.includes('webServer'), 'inject 里没有 webServer（headless 会 pending）')
 
+// 场景 C：webServer 晚于 apply 就绪（真机日志里就是这样，bili 也在等）
+const c3 = makeCtx(false)
+try { mod.apply(c3.ctx, {}) } catch (e) { /* ignore */ }
+await new Promise((r) => setTimeout(r, 50))
+ok(c3.calls.routes.length === 0, 'webServer 未就绪时先不挂路由')
+c3.ctx.webServer = { register: (r) => c3.calls.routes.push(r.path) }
+await new Promise((r) => setTimeout(r, 1600))
+ok(c3.calls.routes.includes('/api/tieba-duty'), 'webServer 就绪后自动挂上（轮询兜底）', String(c3.calls.routes.length))
+
 fs.rmSync(tmp, { recursive: true, force: true })
 process.exit(bad ? 1 : 0)

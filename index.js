@@ -231,14 +231,33 @@ export function apply(ctx, config = {}) {
     }
   }
 
-  if (typeof ctx.inject === 'function') {
-    ctx.inject(['webServer'], (c) => mountRoutes(c.webServer))
-  } else {
+  // 三种取法，按可用性依次退：
+  //   1. ctx.inject（有就用，最正统）
+  //   2. 现在就取（webServer 已经就绪的话）
+  //   3. 没有就每秒轮询 —— webServer 往往晚于本插件几秒才就绪（日志里 bili 也在等它），
+  //      这一步是「不阻塞插件加载、又能等到服务」的唯一稳妥办法。
+  let mounted = false
+  const takeServer = () => {
     let srv
     try { srv = typeof ctx.get === 'function' ? ctx.get('webServer') : undefined } catch { srv = undefined }
     if (!srv) { try { srv = ctx.webServer } catch { srv = undefined } }
-    if (srv) mountRoutes(srv)
-    else log('没有 webServer（headless 下正常）：跳过 HTTP 路由')
+    return srv
+  }
+  const tryMount = () => {
+    if (mounted) return true
+    const srv = takeServer()
+    if (!srv) return false
+    mountRoutes(srv)
+    mounted = true
+    return true
+  }
+
+  if (typeof ctx.inject === 'function') {
+    try { ctx.inject(['webServer'], (c) => { mounted = true; mountRoutes(c.webServer) }) } catch { /* 退到轮询 */ }
+  }
+  if (!tryMount() && !mounted) {
+    const timer = setInterval(() => { try { if (tryMount()) clearInterval(timer) } catch { /* 继续等 */ } }, 1000)
+    ctx.effect(() => () => clearInterval(timer), 'tieba-duty: 等 webServer 就绪')
   }
 
 
