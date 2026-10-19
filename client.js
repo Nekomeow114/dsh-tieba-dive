@@ -62,6 +62,7 @@ window.__ModuleLoader__.load({
       const [msg, setMsg] = React.useState(null)
       const [busy, setBusy] = React.useState(false)
       const [diary, setDiary] = React.useState(null)
+      const [cookieMsg, setCookieMsg] = React.useState(null)
 
       const refresh = React.useCallback(async () => {
         try {
@@ -87,13 +88,13 @@ window.__ModuleLoader__.load({
           setMsg({ ok: false, text: '这是 SSH 公钥（给 GitHub 的），不是 BDUSS。BDUSS 在贴吧 cookie 里，长约 190 个字符。' })
           return
         }
-        setBusy(true); setMsg(null)
+        setBusy(true); setCookieMsg(null)
         try {
           const r = await jpost('/cookie', { cookie })
-          setMsg(r.loggedIn ? { ok: true, text: '登录态有效 ✓' } : { ok: false, text: '没通过：' + (r.hint || 'is_login=0') })
+          setCookieMsg(r.loggedIn ? { ok: true, text: '登录态有效 ✓ 已经把凭证存到本机' } : { ok: false, text: '没通过：' + (r.hint || 'is_login=0') })
           setCookie('')
           await refresh()
-        } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+        } catch (e) { setCookieMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
       }
 
       const saveCfg = async (patch) => {
@@ -128,6 +129,9 @@ window.__ModuleLoader__.load({
         h('div', { className: 'tb-warn', key: 'w' },
           'BDUSS 等于你的登录凭证：它只存在本机 $DSH_HOME/tieba-duty/cookie.txt（600），不回显、不进日志。'
           + '想要清除登录数据，去贴吧「账号安全 → 退出所有设备」。'),
+
+        cookieMsg ? h('div', { key: 'cm', className: 'tb-msg ' + (cookieMsg.ok ? 'ok' : 'err'),
+          style: { marginTop: -6, marginBottom: 12 } }, cookieMsg.text) : null,
 
         h(Field, { key: 'cookie', label: 'BDUSS' }, [
           h('input', {
