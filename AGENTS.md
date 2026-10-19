@@ -17,6 +17,18 @@
    - 手机上：Kiwi + Cookie-Editor 扩展（扩展有 Copy 按钮，比手抄靠谱 —— **BDUSS 里 l/I/1 极容易看错**）。
 4. **别擅自打开「允许回帖」** —— 那是拿用户的号在公开场合说话。要用让用户自己开，并说清每日上限。
 
+## 定时一轮（可选）
+
+用户想「每天自己跑」时，除了 web profile，**headless profile 也要装**：
+
+```bash
+dsh plugin --profile headless add dsh-tieba-scroll
+```
+
+装完在设置页打开「每天 N 点后自动跑一次」。跑失败的日志在
+`$DSH_HOME/tieba-duty/logs/run-YYYY-MM-DD.log`，设置页「看运行日志」能直接读。
+常见失败：headless 里没装插件（工具不存在）、profile 名写错、模型额度不够。
+
 ## 常见故障
 
 | 现象 | 原因 / 处理 |

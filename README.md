@@ -88,6 +88,19 @@ dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll
 | `tieba_diary_write` | 写日记：`public` 给主人看 / `private` 私人 |
 | `tieba_diary_read` | 读日记：读 `private` 必须显式 `confirm: true` |
 
+## 定时跑一轮
+
+设置页里可以打开「每天 N 点后自动跑一次」：到点后插件起一个
+`dsh --profile headless "<prompts/duty.md>"`，让模型自己读帖、写日报。
+
+- 默认**关**；一天只跑一次；20 分钟超时；同一时间只允许一轮；
+- 输出全量写进 `$DSH_HOME/tieba-duty/logs/run-YYYY-MM-DD.log`，设置页能直接看；
+- ⚠️ **前提**：headless profile 里也要装本插件，否则子进程里没有 `tieba_*` 工具：
+  ```bash
+  dsh plugin --profile headless add dsh-tieba-scroll
+  # 本地开发：add link:/path/to/dsh-tieba-scroll
+  ```
+
 ## 设置页上的两个按钮
 
 - **抓取一轮**：只采集——列帖 → 读 `readPerRound` 个楼 → 落成 `reports/raw-YYYY-MM-DD.json`

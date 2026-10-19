@@ -18,6 +18,7 @@ import { freshState, writeState, audit, pruneSeen, today } from './lib/state.mjs
 import { appendDiary, readDiary, diaryStats, diaryFile } from './lib/diary.mjs'
 import { writeReport, readReport, listReports, reportsDir } from './lib/reports.mjs'
 import { toneCheck } from './lib/tone.mjs'
+import { runRound, readLog, logFile } from './lib/runner.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
@@ -140,6 +141,15 @@ export function apply(ctx, config = {}) {
               ok: true, at, file,
               bars: bars.map((b) => ({ kw: b.kw, fresh: b.fresh, read: (b.threads || []).length, error: b.error })),
             })
+          }
+          if (sub === '/run-headless' && req.method === 'POST') {
+            if (roundRunning) return sendJson(res, 409, { ok: false, error: '已经有一轮在跑了' })
+            roundRunning = true
+            const r = await runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin }).finally(() => { roundRunning = false })
+            return sendJson(res, 200, { ...r, hint: r.ok ? '跑完了，去「看最近日报」' : '没跑成，看运行日志（多半是 headless profile 里没装这个插件）' })
+          }
+          if (sub === '/logs' && req.method === 'GET') {
+            return sendJson(res, 200, readLog({ date: new URL(req.url, 'http://127.0.0.1').searchParams.get('date') || undefined }))
           }
           if (sub === '/report' && req.method === 'GET') {
             const u = new URL(req.url, 'http://127.0.0.1')
@@ -375,6 +385,27 @@ export function apply(ctx, config = {}) {
       return json(r)
     },
   })
+
+  // ── 每天自动跑一轮（默认关）──────────────────────────────────────────────
+  let roundRunning = false
+  const maybeAutoRun = async () => {
+    const cfg = cfgOf()
+    if (!cfg.autoRun || roundRunning || !tieba.hasCookie()) return
+    const st = freshState()
+    if (st.lastRunDate === today()) return
+    if (new Date().getHours() < cfg.runHour) return
+    roundRunning = true
+    try {
+      log(`自动跑一轮：profile=${cfg.headlessProfile}`)
+      const r = await runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin })
+      if (r.ok) { const s2 = freshState(); s2.lastRunDate = today(); writeState(s2) }
+      log(`一轮结束：ok=${r.ok} code=${r.code ?? '-'} 日志=${r.log}`)
+    } catch (e) {
+      log(`跑一轮出错：${e?.message ?? e}`)
+    } finally { roundRunning = false }
+  }
+  const runTimer = setInterval(() => { maybeAutoRun().catch(() => {}) }, 60_000)
+  ctx.effect(() => () => clearInterval(runTimer), 'tieba-duty: 每日一轮定时器')
 
   // ── 每天自动签到 ──────────────────────────────────────────────────────────
   const timer = setInterval(() => {
