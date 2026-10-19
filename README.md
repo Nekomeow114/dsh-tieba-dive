@@ -54,7 +54,12 @@ dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll
    从哪拿：电脑浏览器登录贴吧 → `F12` → Application → Cookies → `https://tieba.baidu.com` → 找 `BDUSS`，复制它的 **Value**，前面补上 `BDUSS=`。
    （手机上可以用 Kiwi + Cookie-Editor 扩展。）
 2. **要刷的吧**：一行一个，默认 `deepseek`、`甜食少女嫁人图书馆`。
-3. 开关：`autoSign`（签到）、`autoReply`（回帖，**默认关**）。
+3. 下面这些都在**插件自己的设置页**里改（不依赖宿主自动表单）：
+   - 要刷的吧（一行一个）
+   - 自动签到（每天 `signHour` 点后一次）
+   - 允许回帖（**默认关**）+ 每天条数 + 间隔秒数
+
+   配置落盘在 `$DSH_HOME/tieba-duty/config.json`（600），走 `/api/tieba-duty/config` 读写。
 
 ### 关于 BDUSS 的实话
 
