@@ -22,6 +22,7 @@
   "files": [
     "index.js",
     "client.js",
+    "cordis.patch.yml",
     "lib",
     "prompts",
     "README.md",
@@ -38,5 +39,23 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Nekomeow114/dsh-tieba-scroll.git"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-settings-plugins"
+      ]
+    }
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/schemastery": {
+      "optional": true
+    }
   }
 }
