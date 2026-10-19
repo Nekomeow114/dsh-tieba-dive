@@ -55,7 +55,8 @@ export function apply(ctx, config = {}) {
       log(`工具 ${spec.name} 没注册上（不影响别的）：${e?.message ?? e}`)
     }
   }
-  const json = (v) => JSON.stringify(v, null, 1)
+  // 返回「对象」而不是 JSON 字符串：宿主的 output.schema 是 object，字符串会被判校验失败
+  const json = (v) => v
 
 
   if (typeof ctx.settings?.register === 'function' && Config) {
@@ -425,7 +426,7 @@ export function apply(ctx, config = {}) {
           out.push(r)
         } catch (e) { out.push({ ok: false, kw, error: e.message }) }
       }
-      return json(out)
+      return json({ ok: true, results: out })
     },
   })
 
