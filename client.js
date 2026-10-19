@@ -271,7 +271,7 @@ window.__ModuleLoader__.load({
             h('label', { key: 'c', className: 'tb-kv', style: { display: 'flex', gap: 6, alignItems: 'center' } }, [
               h('input', { key: 'i', type: 'checkbox', checked: !!c.mentionEvery,
                 onChange: (e) => saveCfg({ mentionEvery: e.target.checked }) }),
-              '每条都带',
+              '每条回复都自动带上这个 @',
             ]),
           ]),
           h('div', { className: 'tb-row', key: 'n', style: { marginTop: 8 } }, [
