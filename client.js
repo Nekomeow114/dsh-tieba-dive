@@ -75,7 +75,7 @@ window.__ModuleLoader__.load({
       React.useEffect(() => { refresh() }, [refresh])
 
       const saveCookie = async () => {
-        if (!/BDUSS=/.test(cookie)) { setMsg({ ok: false, text: '要带 BDUSS= 前缀，整串贴进来' }); return }
+        if (!cookie.trim()) { setMsg({ ok: false, text: '先粘贴 BDUSS（带不带前缀都行）' }); return }
         setBusy(true); setMsg(null)
         try {
           const r = await jpost('/cookie', { cookie })
@@ -119,7 +119,7 @@ window.__ModuleLoader__.load({
 
         h(Field, { key: 'cookie', label: 'BDUSS' }, [
           h('input', {
-            key: 'i', className: 'tb-input', type: 'password', placeholder: 'BDUSS=....',
+            key: 'i', className: 'tb-input', type: 'text', placeholder: 'BDUSS=... 或只贴值（自动补前缀）',
             value: cookie, onChange: (e) => setCookie(e.target.value),
           }),
           h('div', { className: 'tb-row', key: 'r', style: { marginTop: 8 } }, [
