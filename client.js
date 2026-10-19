@@ -162,13 +162,39 @@ window.__ModuleLoader__.load({
             onChange: (e) => setCfg({ ...c, personaText: e.target.value }),
           }),
           h('div', { className: 'tb-row', key: 'f', style: { marginTop: 8 } }, [
+            h('label', { key: 'l', className: 'tb-btn ghost', style: { cursor: 'pointer', margin: 0 } }, [
+              '导入文件（.md / .txt）',
+              h('input', {
+                key: 'i', type: 'file', accept: '.md,.txt,.markdown,text/plain,text/markdown',
+                style: { display: 'none' },
+                onChange: (e) => {
+                  const f = e.target.files && e.target.files[0]
+                  if (!f) return
+                  if (f.size > 200 * 1024) { setMsg({ ok: false, text: '这个文件太大了（>200KB），人设不用这么长' }); return }
+                  const reader = new FileReader()
+                  reader.onload = () => {
+                    const text = String(reader.result || '')
+                    setCfg((cur) => ({ ...(cur || c), personaText: text, personaFile: '' }))
+                    setMsg({ ok: true, text: `已读入「${f.name}」（${text.length} 字），记得点「保存人设」` })
+                  }
+                  reader.onerror = () => setMsg({ ok: false, text: '读文件失败了' })
+                  reader.readAsText(f, 'utf-8')
+                  e.target.value = ''
+                },
+              }),
+            ]),
+            h('button', { key: 'b', className: 'tb-btn ghost', disabled: busy,
+              onClick: () => saveCfg({ personaText: c.personaText || '', personaFile: c.personaFile || '' }) }, '保存人设'),
+          ]),
+          h('details', { key: 'adv', style: { marginTop: 8 } }, [
+            h('summary', { key: 's', className: 'tb-kv', style: { cursor: 'pointer' } }, '进阶：直接指一个文件路径'),
             h('input', {
-              key: 'i', className: 'tb-input', placeholder: '或填文件路径：persona.md / /绝对/路径.md',
+              key: 'i', className: 'tb-input', style: { marginTop: 6 },
+              placeholder: 'persona.md（相对 $DSH_HOME/tieba-duty）或 /绝对/路径.md',
               value: c.personaFile || '',
               onChange: (e) => setCfg({ ...c, personaFile: e.target.value }),
             }),
-            h('button', { key: 'b', className: 'tb-btn ghost', disabled: busy,
-              onClick: () => saveCfg({ personaText: c.personaText || '', personaFile: c.personaFile || '' }) }, '保存人设'),
+            h('div', { key: 'h', className: 'tb-kv' }, '路径优先于人设框；留空就用上面框里的内容。'),
           ]),
         ]),
 
