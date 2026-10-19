@@ -27,7 +27,7 @@ ok(toneCheck('').length === 0 && toneCheck(null).length === 0, '空值不炸')
 
 // 2. 配置
 const c = normalize({})
-ok(JSON.stringify(c.bars) === JSON.stringify(['deepseek']), '默认吧只有 deepseek')
+ok(Array.isArray(c.bars) && c.bars.length === 0, '默认不刷任何吧（必须用户自己填）')
 ok(c.readPerRound === 5 && c.replyPerRound === 1, '默认读 5 回 1')
 ok(c.autoReply === false && c.diaryEnabled === true && c.toneGate === true, '默认开关：回帖关、日记开、闸门开')
 ok(c.answerQuestions === true && c.dedupeDays === 7, '默认答疑开、去重 7 天')
