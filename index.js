@@ -42,7 +42,73 @@ export function apply(ctx, config = {}) {
     }
   }
 
-  const tool = (spec) => ctx.tools.register(hostDefineTool(spec))
+  // ── HTTP（设置页用）────────────────────────────────────────────────────────
+  const sendJson = (res, code, obj) => {
+    res.statusCode = code
+    res.setHeader('content-type', 'application/json; charset=utf-8')
+    res.end(JSON.stringify(obj))
+  }
+  const readBody = (req) => new Promise((resolve) => {
+    let b = ''
+    req.on('data', (c) => { b += c; if (b.length > 1e6) req.destroy() })
+    req.on('end', () => { try { resolve(JSON.parse(b || '{}')) } catch { resolve({}) } })
+  })
+
+  try {
+    ctx.effect(() => ctx.webServer.register({
+      kind: 'prefix',
+      path: '/api/tieba-duty',
+      handler: async (req, res) => {
+        const sub = new URL(req.url, 'http://127.0.0.1').pathname.replace('/api/tieba-duty', '') || '/'
+        try {
+          if (sub === '/ping') return sendJson(res, 200, { ok: true, pong: true, version: '0.1.4' })
+          const cfg = cfgOf()
+          if (sub === '/status' && req.method === 'GET') {
+            const st = freshState()
+            return sendJson(res, 200, {
+              ok: true,
+              hasCookie: tieba.hasCookie(),
+              cookieFile: tieba.cookieFile(),
+              today: today(),
+              repliesToday: st.replies,
+              signed: st.signed,
+              cfg,
+            })
+          }
+          if (sub === '/config' && req.method === 'GET') return sendJson(res, 200, { ok: true, cfg })
+          if (sub === '/config' && req.method === 'POST') {
+            const patch = await readBody(req)
+            return sendJson(res, 200, { ok: true, cfg: writeConfig(patch) })
+          }
+          if (sub === '/cookie' && req.method === 'POST') {
+            const b = await readBody(req)
+            tieba.setCookie(String(b.cookie || ''))
+            return sendJson(res, 200, { ok: true, ...(await tieba.whoami()) })
+          }
+          if (sub === '/test' && req.method === 'GET') return sendJson(res, 200, await tieba.whoami())
+          if (sub === '/sign' && req.method === 'POST') {
+            const out = []
+            for (const kw of cfg.bars) {
+              try { out.push(await tieba.sign(kw)) } catch (e) { out.push({ ok: false, kw, error: e.message }) }
+            }
+            return sendJson(res, 200, { ok: true, results: out })
+          }
+          return sendJson(res, 404, { ok: false, error: `unknown ${req.method} ${sub}` })
+        } catch (e) {
+          return sendJson(res, 500, { ok: false, error: e?.message ?? String(e) })
+        }
+      },
+    }), 'tieba-duty: /api/tieba-duty 路由')
+    log('HTTP 路由已挂载：/api/tieba-duty')
+  } catch (e) {
+    log(`HTTP 路由没挂上：${e?.message ?? e}`)
+  }
+
+  const tool = (spec) => {
+    try { ctx.tools.register(hostDefineTool(spec)) } catch (e) {
+      log(`工具 ${spec.name} 没注册上（不影响别的）：${e?.message ?? e}`)
+    }
+  }
   const json = (v) => JSON.stringify(v, null, 1)
 
   tool({
@@ -134,67 +200,6 @@ export function apply(ctx, config = {}) {
       return json(r)
     },
   })
-
-  // ── HTTP（设置页用）────────────────────────────────────────────────────────
-  const sendJson = (res, code, obj) => {
-    res.statusCode = code
-    res.setHeader('content-type', 'application/json; charset=utf-8')
-    res.end(JSON.stringify(obj))
-  }
-  const readBody = (req) => new Promise((resolve) => {
-    let b = ''
-    req.on('data', (c) => { b += c; if (b.length > 1e6) req.destroy() })
-    req.on('end', () => { try { resolve(JSON.parse(b || '{}')) } catch { resolve({}) } })
-  })
-
-  try {
-    ctx.effect(() => ctx.webServer.register({
-      kind: 'prefix',
-      path: '/api/tieba-duty',
-      handler: async (req, res) => {
-        const sub = new URL(req.url, 'http://127.0.0.1').pathname.replace('/api/tieba-duty', '') || '/'
-        try {
-          const cfg = cfgOf()
-          if (sub === '/status' && req.method === 'GET') {
-            const st = freshState()
-            return sendJson(res, 200, {
-              ok: true,
-              hasCookie: tieba.hasCookie(),
-              cookieFile: tieba.cookieFile(),
-              today: today(),
-              repliesToday: st.replies,
-              signed: st.signed,
-              cfg,
-            })
-          }
-          if (sub === '/config' && req.method === 'GET') return sendJson(res, 200, { ok: true, cfg })
-          if (sub === '/config' && req.method === 'POST') {
-            const patch = await readBody(req)
-            return sendJson(res, 200, { ok: true, cfg: writeConfig(patch) })
-          }
-          if (sub === '/cookie' && req.method === 'POST') {
-            const b = await readBody(req)
-            tieba.setCookie(String(b.cookie || ''))
-            return sendJson(res, 200, { ok: true, ...(await tieba.whoami()) })
-          }
-          if (sub === '/test' && req.method === 'GET') return sendJson(res, 200, await tieba.whoami())
-          if (sub === '/sign' && req.method === 'POST') {
-            const out = []
-            for (const kw of cfg.bars) {
-              try { out.push(await tieba.sign(kw)) } catch (e) { out.push({ ok: false, kw, error: e.message }) }
-            }
-            return sendJson(res, 200, { ok: true, results: out })
-          }
-          return sendJson(res, 404, { ok: false, error: `unknown ${req.method} ${sub}` })
-        } catch (e) {
-          return sendJson(res, 500, { ok: false, error: e?.message ?? String(e) })
-        }
-      },
-    }), 'tieba-duty: /api/tieba-duty 路由')
-    log('HTTP 路由已挂载：/api/tieba-duty')
-  } catch (e) {
-    log(`HTTP 路由没挂上：${e?.message ?? e}`)
-  }
 
   // ── 每天自动签到 ──────────────────────────────────────────────────────────
   const timer = setInterval(() => {

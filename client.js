@@ -69,13 +69,23 @@ window.__ModuleLoader__.load({
           if (st && st.cfg) setCfg((cur) => cur || st.cfg)
         } catch (e) {
           setStatus({ ok: false })
-          setMsg({ ok: false, text: '读状态失败：' + (e.message || e) })
+          const m = String(e.message || e)
+          setMsg({
+            ok: false,
+            text: m.includes('404')
+              ? '接口 404：插件的「主机半端」没加载。请把 DSH 完全重启一次（不是只关这个页面），再回来看。'
+              : '读状态失败：' + m,
+          })
         }
       }, [])
       React.useEffect(() => { refresh() }, [refresh])
 
       const saveCookie = async () => {
         if (!cookie.trim()) { setMsg({ ok: false, text: '先粘贴 BDUSS（带不带前缀都行）' }); return }
+        if (/^(ssh-|-----BEGIN)/i.test(cookie.trim())) {
+          setMsg({ ok: false, text: '这是 SSH 公钥（给 GitHub 的），不是 BDUSS。BDUSS 在贴吧 cookie 里，长约 190 个字符。' })
+          return
+        }
         setBusy(true); setMsg(null)
         try {
           const r = await jpost('/cookie', { cookie })
