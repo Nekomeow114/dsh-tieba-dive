@@ -23,6 +23,7 @@ import { isValley, nextValley, peakLabel, currentWindow } from './lib/peak.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
+import { execFileSync } from 'node:child_process'
 
 export const name = 'tieba-scroll'
 // ⚠️ webServer 不能写进 inject：headless profile 没有这个服务，写进去整个插件会 pending，工具全不可用。
@@ -43,6 +44,42 @@ export const Config = !z ? undefined : z.object({
 
 const log = (...a) => console.log('[tieba-duty]', ...a)
 
+/** 最近一次错误（给设置页红点用）；只在内存里，重启即清 */
+let lastError = null
+const noteError = (where, e) => {
+  lastError = { at: new Date().toISOString(), where, message: String((e && e.message) || e) }
+  log(`出错（${where}）：${lastError.message}`)
+}
+
+/** curl 是网络层的命根子，启动就先看一眼 */
+function checkCurl() {
+  try {
+    const out = execFileSync('curl', ['--version'], { encoding: 'utf8', timeout: 5000 })
+    return { ok: true, version: String(out).split('\n')[0].trim() }
+  } catch (e) {
+    return { ok: false, error: '找不到 curl（网络层的请求都靠它）' }
+  }
+}
+
+function checkDirWritable(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true })
+    const f = path.join(dir, '.write-test')
+    fs.writeFileSync(f, 'ok'); fs.unlinkSync(f)
+    return true
+  } catch { return false }
+}
+
+function checkHeadless(cfg) {
+  let bin = cfg.dshBin || 'dsh'
+  try {
+    execFileSync(bin, ['--version'], { encoding: 'utf8', timeout: 8000 })
+  } catch (e) {
+    return { ok: false, error: '找不到 dsh（定时一轮要用它）' }
+  }
+  return { ok: true, bin, profile: cfg.headlessProfile }
+}
+
 export function apply(ctx, config = {}) {
   // ⚠️ headless 子进程里**不许**再起调度器：否则子进程里的插件又会触发定时器，
   //    子子孙孙一直起（真机上真的发生了，日志里每 1~3 分钟一轮）。
@@ -55,7 +92,13 @@ export function apply(ctx, config = {}) {
   }
 
   const tool = (spec) => {
-    try { ctx.tools.register(hostDefineTool(spec)) } catch (e) {
+    const wrapped = {
+      ...spec,
+      execute: async (...a) => {
+        try { return await spec.execute(...a) } catch (e) { noteError('工具 ' + spec.name, e); throw e }
+      },
+    }
+    try { ctx.tools.register(hostDefineTool(wrapped)) } catch (e) {
       log(`工具 ${spec.name} 没注册上（不影响别的）：${e?.message ?? e}`)
     }
   }
@@ -139,6 +182,18 @@ export function apply(ctx, config = {}) {
       handler: async (req, res) => {
         const sub = new URL(req.url, 'http://127.0.0.1').pathname.replace('/api/tieba-duty', '') || '/'
         try {
+          if (sub === '/health') {
+            const cfg = cfgOf()
+            return sendJson(res, 200, {
+              ok: true,
+              curl: checkCurl(),
+              cookie: { ok: tieba.hasCookie(), file: tieba.cookieFile() },
+              bars: cfg.bars || [],
+              dirs: { writable: checkDirWritable(tieba.homeDir()) },
+              headless: checkHeadless(cfg),
+              lastError,
+            })
+          }
           if (sub === '/ping') return sendJson(res, 200, { ok: true, pong: true, version: '0.1.4' })
           const cfg = cfgOf()
           if (sub === '/status' && req.method === 'GET') {
@@ -146,6 +201,8 @@ export function apply(ctx, config = {}) {
             return sendJson(res, 200, {
               ok: true,
               hasCookie: tieba.hasCookie(),
+              curl: checkCurl(),
+              lastError,
               cookieFile: tieba.cookieFile(),
               today: today(),
               repliesToday: st.replies,
@@ -256,6 +313,7 @@ export function apply(ctx, config = {}) {
           return sendJson(res, 404, { ok: false, error: `unknown ${req.method} ${sub}` })
         } catch (e) {
           collecting = false
+          noteError('HTTP ' + sub, e)
           return sendJson(res, 500, { ok: false, error: e?.message ?? String(e) })
         }
       },
@@ -304,6 +362,32 @@ export function apply(ctx, config = {}) {
       const kw = String(args.kw)
       if (await tieba.isFollowing(kw)) return json({ ok: true, kw, already: true })
       return json(await tieba.follow(kw))
+    },
+  })
+
+  tool({
+    name: 'tieba_selfcheck',
+    description: '一次跑完自检：curl / 凭证 / 吧名 / 目录可写 / headless 能不能用。出问题先跑它。',
+    parameters: {},
+    execute: async () => {
+      const cfg = cfgOf()
+      const cur = checkCurl()
+      let cookie = { ok: false }
+      try { const w = await tieba.whoami(); cookie = { ok: !!w.loggedIn } } catch (e) { cookie = { ok: false, error: e.message } }
+      const bars = cfg.bars || []
+      const barCheck = []
+      for (const kw of bars.slice(0, 5)) {
+        try { const r = await tieba.listBar(kw); barCheck.push({ kw, ok: !!r.fid, threads: r.threads.length, fid: r.fid }) }
+        catch (e) { barCheck.push({ kw, ok: false, error: e.message }) }
+      }
+      return json({
+        curl: cur,
+        cookie,
+        bars: { list: bars, empty: bars.length === 0, checks: barCheck },
+        dirs: { writable: checkDirWritable(tieba.homeDir()) },
+        headless: checkHeadless(cfg),
+        lastError,
+      })
     },
   })
 
@@ -567,6 +651,10 @@ export function apply(ctx, config = {}) {
     } catch (e) { log(`定时器出错：${e?.message ?? e}`) }
   }, 60_000)
   ctx.effect(() => () => clearInterval(timer), 'tieba-duty: 签到定时器')
+
+  const curl0 = checkCurl()
+  if (!curl0.ok) log('⚠️ 找不到 curl —— 贴吧请求会全部失败，请先装 curl')
+  else log(`curl ✓ ${curl0.version}`)
 
   const c0 = cfgOf()
   log(`已挂载（${c0.bars.join(' / ')}；签到=${c0.autoSign ? '开' : '关'}；回帖=${c0.autoReply ? `开(${c0.replyPerDay}/天)` : '关'}）`)

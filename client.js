@@ -101,6 +101,7 @@ window.__ModuleLoader__.load({
       const [report, setReport] = React.useState(null)
       const [diary, setDiary] = React.useState(null)
       const [runLog, setRunLog] = React.useState(null)
+      const [health, setHealth] = React.useState(null)
 
       const refresh = React.useCallback(async () => {
         try {
@@ -177,7 +178,12 @@ window.__ModuleLoader__.load({
             ? '✗ ' + b.kw + '：' + b.error
             : '✓ ' + b.kw + '：读到 ' + b.read + ' 个贴（新帖 ' + b.fresh + ' 个）')
           let tail = ''
-          const c = cfg || {}
+          const runSelfcheck = async () => {
+        setBusy(true)
+        try { setHealth(await jget('/health')) } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+      }
+
+      const c = cfg || {}
           if (c.autoReply && (c.replyPerRound ?? 1) > 0) {
             setMsg({ ok: true, text: lines.join('\n') + '\n\n接着让模型跑一轮…' })
             const rr = await jpost('/run-headless', {})
@@ -224,6 +230,11 @@ window.__ModuleLoader__.load({
         rd.readAsText(f, 'utf-8')
       }
 
+      const runSelfcheck = async () => {
+        setBusy(true)
+        try { setHealth(await jget('/health')) } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+      }
+
       const c = cfg || { bars: [], readPerRound: 5, replyPerRound: 1, replyPerDay: 3, replyGapSec: 30, requestGapMs: 1200, signHour: 9, runHour: 21 }
       const running = !!(live && live.busy)
       const hasCookie = !!(status && status.hasCookie)
@@ -241,6 +252,27 @@ window.__ModuleLoader__.load({
           h('span', { key: 'd', className: 'tb-chip' }, live && live.busy ? (live.collecting ? '采集中…' : '模型轮进行中…') : '空闲'),
           h('span', { key: 'e', className: 'tb-chip' }, live && live.lastRunDate ? '上次跑完 ' + live.lastRunDate : '还没跑过'),
         ]),
+
+        // ── 启动检查：curl 缺了会全线失败，必须最先说 ──
+        (status && status.curl && status.curl.ok === false) ? h('div', { key: 'nocurl', className: 'tb-warn', style: { borderColor: '#e8a0a0', background: '#fdeeee', color: '#8a2020' } },
+          '机器上没有 curl —— 所有贴吧请求都会失败。先装 curl（Linux/macOS 一般自带，Windows 10+ 也自带），再重启 DSH。') : null,
+
+        // ── 最近一次错误（有就显示，能折叠）──
+        (status && status.lastError) ? h('details', { key: 'err', className: 'tb-card', style: { borderColor: '#f0c9c9' } }, [
+          h('summary', { key: 's', style: { color: '#a33' } },
+            '最近一次错误 · ' + String(status.lastError.at || '').slice(5, 16).replace('T', ' ') + ' · ' + (status.lastError.where || '')),
+          h('pre', { key: 'p', className: 'tb-pre' }, status.lastError.message || ''),
+        ]) : null,
+
+        // ── 首次使用引导：还没登录 / 还没填吧时显示 ──
+        ((!hasCookie || !c.bars || c.bars.length === 0)) ? h('div', { key: 'onboard', className: 'tb-card', style: { borderColor: '#cfe0f7', background: '#f7fbff' } }, [
+          h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, '三步就能跑起来'),
+          h('div', { key: 'l', className: 'tb-kv', style: { lineHeight: 2 } }, [
+            h('div', { key: 'a' }, (hasCookie ? '✅' : '①') + ' 贴 BDUSS（在「① 账号」里，点保存并测试）'),
+            h('div', { key: 'b' }, ((c.bars && c.bars.length) ? '✅' : '②') + ' 填要刷的吧（一行一个，贴吧里的吧名）'),
+            h('div', { key: 'c' }, '③ 点「刷一轮贴吧」——先只采集，看看它读到了什么'),
+          ]),
+        ]) : null,
 
         // ── ① 账号 ──
         h('div', { key: 'acct', className: 'tb-card' }, [
@@ -405,6 +437,16 @@ window.__ModuleLoader__.load({
             diary ? h('pre', { key: 'd', className: 'tb-pre' }, (diary.text || '（还没有）') + '\n\n' + (diary.file || '')) : null,
           ]),
         ]),
+
+        h('div', { key: 'self', className: 'tb-row' }, [
+          h('button', { key: 'b', className: 'tb-btn ghost sm', disabled: busy, onClick: runSelfcheck }, '运行自检'),
+          health ? h('span', { key: 'k', className: 'tb-kv' },
+            'curl ' + (health.curl && health.curl.ok ? '✓' : '✗')
+            + ' · 凭证 ' + (health.cookie && health.cookie.ok ? '✓' : '✗')
+            + ' · 目录 ' + (health.dirs && health.dirs.writable ? '✓' : '✗')
+            + ' · headless ' + (health.headless && health.headless.ok ? '✓' : '✗')) : null,
+        ]),
+        health ? h('pre', { key: 'hp', className: 'tb-pre' }, JSON.stringify(health, null, 1)) : null,
 
         msg ? h('div', { key: 'm', className: 'tb-msg ' + (msg.ok ? 'ok' : 'err') }, msg.text) : null,
       ])
