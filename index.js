@@ -106,12 +106,14 @@ export function apply(ctx, config = {}) {
 
   // 可选依赖：没 inject webServer 时不能直接读属性（Cordis 会抛），
   // 先试 ctx.get（官方的「可选取服务」姿势），不行再兜一层属性访问。
-  let webServer
-  try { webServer = typeof ctx.get === 'function' ? ctx.get('webServer') : undefined } catch { webServer = undefined }
-  if (!webServer) { try { webServer = ctx.webServer } catch { webServer = undefined } }
-  try {
-    if (!webServer) throw new Error('没有 webServer（headless 下正常）：跳过 HTTP 路由')
-    ctx.effect(() => webServer.register({
+  // ⚠️ 为什么用 ctx.inject 而不是在 apply 里直接取：
+  //   · webServer 属于 dsh-web-app，可能在本插件 apply 之后才就绪；
+  //     直接读 ctx.get('webServer') 会拿到 undefined，路由静默不挂 ⇒ 设置页全 404。
+  //   · 又不能把 webServer 写进静态 inject：headless 没这个服务，整个插件会 pending。
+  // ctx.inject 是「等服务就绪再执行」，两边都不挡。
+  const mountRoutes = (webServer) => {
+    try {
+      ctx.effect(() => webServer.register({
       kind: 'prefix',
       path: '/api/tieba-duty',
       handler: async (req, res) => {
@@ -222,10 +224,21 @@ export function apply(ctx, config = {}) {
           return sendJson(res, 500, { ok: false, error: e?.message ?? String(e) })
         }
       },
-    }), 'tieba-duty: /api/tieba-duty 路由')
-    log('HTTP 路由已挂载：/api/tieba-duty')
-  } catch (e) {
-    log(`HTTP 路由没挂上：${e?.message ?? e}`)
+      }), 'tieba-duty: /api/tieba-duty 路由')
+      log('HTTP 路由已挂载：/api/tieba-duty')
+    } catch (e) {
+      log(`HTTP 路由没挂上：${e?.message ?? e}`)
+    }
+  }
+
+  if (typeof ctx.inject === 'function') {
+    ctx.inject(['webServer'], (c) => mountRoutes(c.webServer))
+  } else {
+    let srv
+    try { srv = typeof ctx.get === 'function' ? ctx.get('webServer') : undefined } catch { srv = undefined }
+    if (!srv) { try { srv = ctx.webServer } catch { srv = undefined } }
+    if (srv) mountRoutes(srv)
+    else log('没有 webServer（headless 下正常）：跳过 HTTP 路由')
   }
 
 

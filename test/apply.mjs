@@ -24,6 +24,8 @@ function makeCtx(withWeb) {
     tools: { register: (t) => calls.tools.push(t.name) },
     effect: (fn) => { calls.effects += 1; try { fn() } catch { /* ignore */ } },
     get: (name) => (withWeb && name === 'webServer' ? ctx.webServer : undefined),
+    // Cordis 的动态注入：服务就绪才回调；这里模拟「有就立刻回调」
+    inject: (deps, cb) => { if (withWeb && deps.includes('webServer')) cb(ctx) },
   }
   if (withWeb) ctx.webServer = { register: (r) => calls.routes.push(r.path) }
   return { ctx, calls }
