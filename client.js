@@ -243,6 +243,13 @@ window.__ModuleLoader__.load({
               onBlur: () => saveCfg({ replyPerRound: Number(c.replyPerRound) }) }),
             h('span', { key: 'e', className: 'tb-kv' }, '条（默认读 5 贴、回 1 条）'),
           ]),
+          h('div', { className: 'tb-row', key: 'g', style: { marginTop: 8 } }, [
+            h('span', { key: 'a', className: 'tb-kv' }, '请求间隔'),
+            h('input', { key: 'b', className: 'tb-input', type: 'number', style: { width: 90 }, value: c.requestGapMs ?? 1200,
+              onChange: (e) => setCfg({ ...c, requestGapMs: e.target.value }),
+              onBlur: () => saveCfg({ requestGapMs: Number(c.requestGapMs) }) }),
+            h('span', { key: 'c', className: 'tb-kv' }, '毫秒（1200 稳；想快可以调到 600，别低于 300）'),
+          ]),
         ]),
 
         h(Field, { key: 'autoSign', label: '自动签到' }, [

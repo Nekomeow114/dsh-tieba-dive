@@ -44,7 +44,11 @@ export const Config = !z ? undefined : z.object({
 const log = (...a) => console.log('[tieba-duty]', ...a)
 
 export function apply(ctx, config = {}) {
-  const cfgOf = () => readConfig(config)
+  const cfgOf = () => {
+    const c = readConfig(config)
+    tieba.setGap(c.requestGapMs)
+    return c
+  }
 
   const tool = (spec) => {
     try { ctx.tools.register(hostDefineTool(spec)) } catch (e) {
