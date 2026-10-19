@@ -51,6 +51,24 @@ window.__ModuleLoader__.load({
       .tb-switch { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
     `
 
+    /** 面板出错时别留一片空白：把错误和堆栈直接显示出来，好排查 */
+    class Boundary extends React.Component {
+      constructor(props) { super(props); this.state = { err: null } }
+      static getDerivedStateFromError(err) { return { err } }
+      componentDidCatch(err) { try { console.error('[刷贴吧] 面板渲染出错', err) } catch { /* ignore */ } }
+      render() {
+        if (this.state.err) {
+          return h('div', { className: 'tb-wrap' }, [
+            h('h2', { key: 't' }, '刷贴吧 · 面板出错了'),
+            h('div', { key: 'm', className: 'tb-msg err' }, String(this.state.err && this.state.err.message || this.state.err)),
+            h('div', { key: 's', className: 'tb-msg err' }, String(this.state.err && this.state.err.stack || '').split('\n').slice(0, 6).join('\n')),
+            h('div', { key: 'h', className: 'tb-kv' }, '把上面这段发给大肥鱼，它照着修。'),
+          ])
+        }
+        return this.props.children
+      }
+    }
+
     function Field({ label, children }) {
       return h('div', { className: 'tb-field' }, [h('label', { className: 'tb-label', key: 'l' }, label), children])
     }
@@ -331,7 +349,7 @@ window.__ModuleLoader__.load({
               : live.busy
                 ? '状态：' + (live.collecting ? '正在采集帖子…' : '模型轮进行中…') + '（退出面板也会继续跑）'
                 : '状态：空闲' + (live.lastRunDate ? '（上次跑完：' + live.lastRunDate + '）' : '')),
-          h('div', { key: 'h', className: 'tb-kv' },
+          h('div', { key: 'hint', className: 'tb-kv' },
             '「刷一轮贴吧」：先按设置读 ' + (c.readPerRound || 5) + ' 个贴存原始数据；开了「允许回帖」时再让模型跑一轮（读原始数据 → 写日报 → 回 ' + (c.replyPerRound ?? 1) + ' 条）。'),
           report ? h('pre', { key: 'rp', className: 'tb-area', style: { marginTop: 8, whiteSpace: 'pre-wrap', maxHeight: 260, overflow: 'auto' } },
             report.text || '（空）') : null,
@@ -392,7 +410,7 @@ window.__ModuleLoader__.load({
         if (!slots) return
         slots.inject('settings.section', () => slots.register(
           { name: 'settings.section', id: 'tieba-scroll', order: 31, label: '刷贴吧' },
-          () => h(Panel),
+          () => h(Boundary, null, h(Panel)),
         ))
       },
     }
