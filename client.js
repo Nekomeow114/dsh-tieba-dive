@@ -138,6 +138,10 @@ window.__ModuleLoader__.load({
             h('button', { key: 'b', className: 'tb-btn', disabled: busy, onClick: saveCookie }, '保存并测试'),
             h('span', { key: 'k', className: 'tb-kv' }, status && status.hasCookie ? '已有凭证 ✓' : '还没有凭证'),
           ]),
+          h('div', { key: 'hint', className: 'tb-kv', style: { marginTop: 8 } },
+            '不知道怎么拿 BDUSS？直接在聊天里问大肥鱼：「教我怎么拿贴吧的 BDUSS」，它会一步步告诉你。'),
+          h('div', { key: 'hint2', className: 'tb-kv' },
+            '要点：贴吧 cookie 里那一行，约 190 个字符；带不带 BDUSS= 前缀都行，别手打（l / I / 1 最容易错）。'),
         ]),
 
         h(Field, { key: 'bars', label: '要刷的吧（一行一个）' }, [

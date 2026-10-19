@@ -51,7 +51,8 @@ dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll
 进 **设置 → 刷贴吧**：
 
 1. **BDUSS**：贴进来 → 「保存并测试」。
-   从哪拿：电脑浏览器登录贴吧 → `F12` → Application → Cookies → `https://tieba.baidu.com` → 找 `BDUSS`，复制它的 **Value**，前面补上 `BDUSS=`。
+   从哪拿：电脑浏览器登录贴吧 → `F12` → Application → Cookies → `https://tieba.baidu.com` → 找 `BDUSS`，复制它的 **Value**（带不带 `BDUSS=` 前缀都行）。
+   **不会拿也没关系**：直接在聊天里问「教我怎么拿贴吧的 BDUSS」，助手会一步步带。
    （手机上可以用 Kiwi + Cookie-Editor 扩展。）
 2. **要刷的吧**：一行一个，默认 `deepseek`、`甜食少女嫁人图书馆`。
 3. 下面这些都在**插件自己的设置页**里改（不依赖宿主自动表单）：
