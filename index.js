@@ -88,6 +88,7 @@ export function apply(ctx, config = {}) {
   const cfgOf = () => {
     const c = readConfig(config)
     tieba.setGap(c.requestGapMs)
+    tieba.setBreakerMinutes(c.breakerMin)
     return c
   }
 
@@ -182,6 +183,10 @@ export function apply(ctx, config = {}) {
       handler: async (req, res) => {
         const sub = new URL(req.url, 'http://127.0.0.1').pathname.replace('/api/tieba-duty', '') || '/'
         try {
+          if (sub === '/cooldown/clear' && req.method === 'POST') {
+            tieba.clearCooldown()
+            return sendJson(res, 200, { ok: true })
+          }
           if (sub === '/health') {
             const cfg = cfgOf()
             return sendJson(res, 200, {
@@ -202,6 +207,7 @@ export function apply(ctx, config = {}) {
               ok: true,
               hasCookie: tieba.hasCookie(),
               curl: checkCurl(),
+              cooldown: (() => { const cd = tieba.readCooldown(); return { ...cd, leftMin: Math.max(0, Math.ceil((cd.until - Date.now()) / 60000)) } })(),
               lastError,
               cookieFile: tieba.cookieFile(),
               today: today(),

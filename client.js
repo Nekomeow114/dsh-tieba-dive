@@ -257,6 +257,22 @@ window.__ModuleLoader__.load({
         (status && status.curl && status.curl.ok === false) ? h('div', { key: 'nocurl', className: 'tb-warn', style: { borderColor: '#e8a0a0', background: '#fdeeee', color: '#8a2020' } },
           '机器上没有 curl —— 所有贴吧请求都会失败。先装 curl（Linux/macOS 一般自带，Windows 10+ 也自带），再重启 DSH。') : null,
 
+        // ── 风控熔断：撞到验证码后自动歇着 ──
+        (status && status.cooldown && status.cooldown.active) ? h('div', { key: 'cd', className: 'tb-warn', style: { borderColor: '#e8c48a', background: '#fff6e5' } }, [
+          h('div', { key: 't', style: { fontWeight: 600, marginBottom: 4 } },
+            '⏸ 风控熔断中：还剩 ' + (status.cooldown.leftMin || '?') + ' 分钟'),
+          h('div', { key: 'm' }, '原因：' + (status.cooldown.reason || '百度安全验证') + '。这段时间插件一个请求都不会发，避免连续撞墙。'),
+          h('div', { key: 'r', className: 'tb-row', style: { marginTop: 8 } }, [
+            h('button', { key: 'b', className: 'tb-btn ghost sm', disabled: busy,
+              onClick: async () => {
+                setBusy(true)
+                try { await jpost('/cooldown/clear', {}); await refresh(); setMsg({ ok: true, text: '已解除熔断' }) }
+                catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+              } }, '我已经处理好了，解除'),
+            h('span', { key: 'k', className: 'tb-kv' }, '（比如你刚在手机上过了滑块）'),
+          ]),
+        ]) : null,
+
         // ── 最近一次错误（有就显示，能折叠）──
         (status && status.lastError) ? h('details', { key: 'err', className: 'tb-card', style: { borderColor: '#f0c9c9' } }, [
           h('summary', { key: 's', style: { color: '#a33' } },

@@ -36,6 +36,16 @@ ok(normalize({ replyPerDay: 999 }).replyPerDay === 20, '每日上限被夹到 20
 ok(normalize({ readPerRound: 0 }).readPerRound === 1, '每轮读至少 1')
 ok(normalize({ diaiyEnabled: false }).diaryEnabled === true, '拼错的键不会误关功能')
 
+// 2.5 风控熔断
+const cd = await import('../lib/cooldown.mjs')
+ok(cd.readCooldown().active === false, '熔断：初始是不激活')
+cd.trip(1, '百度安全验证')
+const c1 = cd.readCooldown()
+ok(c1.active === true && c1.reason === '百度安全验证', '熔断：写入后立刻生效')
+ok(cd.remainingMs() > 0 && cd.remainingMs() <= 60_000, '熔断：剩余时间在范围内', String(cd.remainingMs()))
+cd.clearCooldown()
+ok(cd.readCooldown().active === false, '熔断：手动解除后失效')
+
 // 3. 日报
 const w = writeReport('# 日报\n\n## deepseek吧\n- 一条')
 ok(w.ok && fs.existsSync(w.file), '日报：写文件成功', w.file)
