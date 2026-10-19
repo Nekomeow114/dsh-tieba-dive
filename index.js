@@ -163,8 +163,12 @@ export function apply(ctx, config = {}) {
       content: { type: 'string', description: '日记正文' },
     },
     execute: async (args) => {
-      if (!['public', 'private'].includes(String(args.scope))) return json({ ok: false, error: 'scope 只能是 public / private' })
-      return json(appendDiary(String(args.scope), String(args.content || '')))
+      const scope = String(args.scope)
+      if (!['public', 'private'].includes(scope)) return json({ ok: false, error: 'scope 只能是 public / private' })
+      const cfg = cfgOf()
+      if (!cfg.diaryEnabled) return json({ ok: false, error: '写日记是关着的（设置页可以打开）' })
+      if (scope === 'private' && !cfg.diaryPrivate) return json({ ok: false, error: '私人日记是关着的（设置页可以打开）' })
+      return json(appendDiary(scope, String(args.content || '')))
     },
   })
 

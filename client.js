@@ -201,6 +201,16 @@ window.__ModuleLoader__.load({
         ]),
 
         h(Field, { key: 'diary', label: '日记本' }, [
+          h('div', { className: 'tb-switch', key: 'on' }, [
+            h('input', { key: 'c', type: 'checkbox', checked: c.diaryEnabled !== false,
+              onChange: (e) => saveCfg({ diaryEnabled: e.target.checked }) }),
+            h('span', { key: 't', className: 'tb-kv' }, '允许写日记'),
+          ]),
+          h('div', { className: 'tb-switch', key: 'pv' }, [
+            h('input', { key: 'c', type: 'checkbox', checked: c.diaryPrivate !== false,
+              onChange: (e) => saveCfg({ diaryPrivate: e.target.checked }) }),
+            h('span', { key: 't', className: 'tb-kv' }, '允许写私人日记（只有主人手动翻开才看得到）'),
+          ]),
           h('div', { className: 'tb-row', key: 'b' }, [
             h('button', { key: 'p', className: 'tb-btn ghost', disabled: busy,
               onClick: async () => { setBusy(true); try { setDiary(await jget('/diary?scope=public')) } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) } } },
