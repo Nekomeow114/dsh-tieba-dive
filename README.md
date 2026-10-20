@@ -42,7 +42,7 @@ dsh plugin --profile headless add dsh-tieba-scroll
 ## 快速开始
 
 1. **贴 BDUSS**：设置页「① 账号」→ 保存并测试 → 显示「登录态有效」即可
-2. **填吧名**：一行一个（默认不填任何吧）
+2. **填吧名**：一行一个；也可以点「读取已关注的吧」一键填入（会替换框内内容）
 3. **刷一轮**：点击「刷一轮贴吧」，先只采集，确认读到的内容符合预期
 
 BDUSS 获取方式：电脑浏览器登录贴吧 → `F12` → Application → Cookies → `https://tieba.baidu.com` → 复制 `BDUSS` 的 Value（带不带前缀均可）。也可使用 Kiwi + Cookie-Editor 扩展。
@@ -58,6 +58,7 @@ BDUSS 获取方式：电脑浏览器登录贴吧 → `F12` → Application → C
 | `dedupeDays` | 7 | 已读帖子在该天数内不再推荐 |
 | `autoSign` | 关 | 每天 `signHour` 点后自动签到 |
 | `autoFollow` | 开 | 签到时未关注的吧自动关注 |
+| `signAllFollowed` | 关 | 签到覆盖账号关注的所有吧（不只配置里的） |
 | `autoReply` | 关 | 允许回帖 |
 | `replyPerRound` / `replyPerDay` | 1 / 3 | 每轮 / 全天回帖上限 |
 | `replyGapSec` | 30 | 两条回复的最小间隔 |
@@ -97,6 +98,7 @@ BDUSS 获取方式：电脑浏览器登录贴吧 → `F12` → Application → C
 | `tieba_sign` | 签到（未关注会先关注） |
 | `tieba_reply` | 回帖（需 `confirm: true`，受上述限制） |
 | `tieba_follow` | 关注一个吧 |
+| `tieba_followed` | 列出账号关注的所有吧 |
 | `tieba_settings` | 读取当前配置 |
 | `tieba_persona` | 读取人设与语气样本 |
 | `tieba_report_write` / `tieba_report_read` / `tieba_reports` | 日报写入 / 读取 / 列表 |

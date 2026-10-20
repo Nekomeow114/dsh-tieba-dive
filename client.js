@@ -313,7 +313,20 @@ window.__ModuleLoader__.load({
           h('div', { key: 'br', className: 'tb-row' }, [
             h('button', { key: 'b', className: 'tb-btn ghost', disabled: busy,
               onClick: () => save({ bars: (c.bars || []).map((x) => x.trim()).filter(Boolean) }) }, '保存吧列表'),
+            h('button', { key: 'f', className: 'tb-btn ghost', disabled: busy,
+              onClick: async () => {
+                setBusy(true); setMsg(null)
+                try {
+                  const r = await jget('/bars/followed')
+                  if (!r.ok) throw new Error(r.error || '读取失败')
+                  if ((c.bars || []).filter(Boolean).length && !window.confirm('会把框里现有的吧替换成你的关注列表，继续？')) return
+                  setCfg({ ...c, bars: r.bars })
+                  await save({ bars: r.bars })
+                  setMsg({ ok: true, text: `已读取 ${r.count} 个关注的吧并填入` })
+                } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+              } }, '读取已关注的吧'),
           ]),
+          h('div', { key: 'fh', className: 'tb-kv' }, '「读取已关注的吧」会拉当前账号的关注列表，一键填进上面的框（会替换）。'),
         ]),
 
         // ── ② 每一轮 ──
@@ -400,6 +413,8 @@ window.__ModuleLoader__.load({
           h('div', { key: 'b', className: 'tb-body' }, [
             h(Sw, { key: 'sg', on: c.autoSign, onChange: (v) => save({ autoSign: v }),
               text: '自动签到（每天 ' + c.signHour + ' 点后，未关注会先关注）' }),
+            h(Sw, { key: 'sa', on: c.signAllFollowed === true, onChange: (v) => save({ signAllFollowed: v }),
+              text: '签到也覆盖「账号关注的所有吧」（不只框里这些）' }),
             h('div', { key: 'sr', className: 'tb-row' }, [
               h('button', { key: 'b', className: 'tb-btn ghost sm', disabled: busy, onClick: signNow }, '立即签到一次'),
             ]),

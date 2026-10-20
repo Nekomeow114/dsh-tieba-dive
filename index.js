@@ -318,6 +318,12 @@ export function apply(ctx, config = {}) {
             const latest = u.searchParams.get('latest') === '1'
             return sendJson(res, 200, readReport({ latest, date: u.searchParams.get('date') || undefined }))
           }
+          if (sub === '/bars/followed' && req.method === 'GET') {
+            try {
+              const names = await tieba.followedForums()
+              return sendJson(res, 200, { ok: true, count: names.length, bars: names })
+            } catch (e) { return sendJson(res, 500, { ok: false, error: e.message }) }
+          }
           if (sub === '/config' && req.method === 'GET') return sendJson(res, 200, { ok: true, cfg })
           if (sub === '/persona' && req.method === 'GET') return sendJson(res, 200, { ok: true, ...resolvePersona(cfg) })
           if (sub === '/diary' && req.method === 'GET') {
@@ -431,6 +437,16 @@ export function apply(ctx, config = {}) {
     description: '看当前配置（吧列表 / 每轮读几条回几条 / 签到与回帖开关 / 每天上限）。动手前先看它，别猜。',
     parameters: {},
     execute: async () => json(cfgOf()),
+  })
+
+  tool({
+    name: 'tieba_followed',
+    description: '列出当前账号关注的所有吧（app 接口）。可以拿它来填「要刷的吧」，或检查关注状态。',
+    parameters: {},
+    execute: async () => {
+      const names = await tieba.followedForums()
+      return json({ ok: true, count: names.length, bars: names })
+    },
   })
 
   tool({
@@ -554,7 +570,13 @@ export function apply(ctx, config = {}) {
     parameters: { kw: { type: 'string', description: '只签某一个吧（可省）' } },
     execute: async (args) => {
       const cfg = cfgOf()
-      const bars = args.kw ? [String(args.kw)] : cfg.bars
+      let bars = args.kw ? [String(args.kw)] : [...cfg.bars]
+      if (!args.kw && cfg.signAllFollowed) {
+        try {
+          const followed = await tieba.followedForums()
+          bars = [...new Set([...bars, ...followed])]
+        } catch (e) { log(`拉取关注列表失败（只签框里的）：${e.message}`) }
+      }
       const out = []
       for (const kw of bars) {
         try {
