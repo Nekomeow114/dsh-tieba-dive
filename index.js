@@ -15,6 +15,7 @@ import { defineTool as hostDefineTool } from './lib/toolkit.mjs'
 import * as tieba from './lib/tieba.js'
 import { readConfig, writeConfig, DEFAULTS } from './lib/config.mjs'
 import { freshState, writeState, audit, pruneSeen, today } from './lib/state.mjs'
+import { readSchedule, writeSchedule } from './lib/schedule.mjs'
 import { appendDiary, readDiary, diaryStats, diaryFile } from './lib/diary.mjs'
 import { writeReport, readReport, listReports, reportsDir } from './lib/reports.mjs'
 import { toneCheck } from './lib/tone.mjs'
@@ -710,9 +711,9 @@ export function apply(ctx, config = {}) {
     const cfg = cfgOf()
     if ((!cfg.autoRun && !cfg.peakValley) || roundRunning || !tieba.hasCookie()) return
     if (!cfg.bars || cfg.bars.length === 0) { log('没设置要刷的吧，跳过这一轮'); return }
-    const st = freshState()
+    const sched = readSchedule()
     const COOLDOWN = 6 * 3600_000
-    if (st.lastRunAt && Date.now() - st.lastRunAt < COOLDOWN) {
+    if (sched.lastRunAt && Date.now() - sched.lastRunAt < COOLDOWN) {
       return // 冷却中：兜底，防 runs 记录丢了导致连环触发
     }
 
@@ -722,11 +723,10 @@ export function apply(ctx, config = {}) {
       if (!win) return
       if (win === 'noon' && !cfg.noon) return
       if (win === 'night' && !cfg.night) return
-      st.runs = st.runs || {}
-      if (st.runs[win] === today()) return
-      st.runs[win] = today()   // 先标记，失败也不至于一分钟一跑
-      st.lastRunAt = Date.now()
-      writeState(st)
+      if (sched.runs[win] === today()) return
+      sched.runs[win] = today()   // 先标记，失败也不至于一分钟一跑
+      sched.lastRunAt = Date.now()
+      writeSchedule(sched)
     } else {
       if (st.lastRunDate === today()) return
       if (new Date().getHours() < cfg.runHour) return
@@ -735,7 +735,7 @@ export function apply(ctx, config = {}) {
     roundRunning = true
     const r0 = startRound('auto')
     try {
-      const s0 = freshState(); s0.lastRunAt = Date.now(); writeState(s0)
+      sched.lastRunAt = Date.now(); writeSchedule(sched)
       log(`自动跑一轮：profile=${cfg.headlessProfile}`)
       const r = await runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin, roundId: r0.id })
       if (r.ok) { const s2 = freshState(); s2.lastRunDate = today(); s2.round = null; writeState(s2); log('一轮跑成功了') }

@@ -272,13 +272,6 @@ window.__ModuleLoader__.load({
             + (status && c.autoReply && (status.repliesToday || 0) >= (c.replyPerDay ?? 5) ? ' · 额度已满' : '')),
           h('span', { key: 'c', className: 'tb-chip ' + (status && status.valley && status.valley.isValley ? 'ok' : 'warn') },
             status && status.valley ? '现在：' + status.valley.now : '峰谷：未知'),
-          h('span', { key: 'd', className: 'tb-chip ' + (live && live.busy ? 'run' : '') },
-            !live ? '状态读取中…'
-              : live.busy
-                ? ('后台正在运行中 · ' + (live.collecting ? '采集中' : ('大肥鱼在刷贴吧'
-                  + (live.round && live.round.trigger === 'auto' ? '（自动）' : '（手动）')
-                  + (live.round && live.round.startedAt ? ' · ' + new Date(live.round.startedAt).toTimeString().slice(0, 5) + ' 起' : ''))))
-                : '大肥鱼待命中'),
         ]),
 
         // ── 启动检查：curl 缺了会全线失败，必须最先说 ──
