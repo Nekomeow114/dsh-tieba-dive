@@ -18,7 +18,7 @@ import { freshState, writeState, audit, pruneSeen, today } from './lib/state.mjs
 import { appendDiary, readDiary, diaryStats, diaryFile } from './lib/diary.mjs'
 import { writeReport, readReport, listReports, reportsDir } from './lib/reports.mjs'
 import { toneCheck } from './lib/tone.mjs'
-import { runRound, readLog, logFile, stopRound } from './lib/runner.mjs'
+import { runRound, readLog, logFile, stopRound, isRunning } from './lib/runner.mjs'
 import { isValley, nextValley, peakLabel, currentWindow } from './lib/peak.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -277,6 +277,12 @@ export function apply(ctx, config = {}) {
           }
           if (sub === '/run-headless' && req.method === 'POST') {
             if (roundRunning) return sendJson(res, 409, { ok: false, error: '已经有一轮在跑了' })
+            {
+              const stPre = freshState()
+              if (cfg.autoReply && stPre.replies >= cfg.replyPerDay) {
+                return sendJson(res, 409, { ok: false, error: `今天的回帖额度已经用完（${stPre.replies}/${cfg.replyPerDay}），先不跑模型轮了` })
+              }
+            }
             roundRunning = true
             startRound()
             const logPath = logFile()
@@ -294,6 +300,12 @@ export function apply(ctx, config = {}) {
             const stNow = freshState()
             if (roundRunning && stNow.round && Date.now() - (stNow.round.startedAt || 0) > 25 * 60_000) {
               log('本轮跑了超过 25 分钟，判定卡住，复位')
+              roundRunning = false
+              endRound()
+            }
+            // 子进程已经没了，但标志还没清（close 事件可能不来）→ 立刻复位
+            if (roundRunning && !isRunning()) {
+              log('子进程已结束，复位本轮状态')
               roundRunning = false
               endRound()
             }
