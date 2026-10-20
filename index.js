@@ -48,6 +48,19 @@ export const Config = !z ? undefined : z.object({
 
 const log = (...a) => console.log('[tieba-duty]', ...a)
 
+/** 人设：file 优先，其次 text；都没有就返回空串（模型就用默认口吻） */
+function resolvePersona(cfg) {
+  const home = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
+  const f = String(cfg.personaFile || '').trim()
+  if (f) {
+    const abs = path.isAbsolute(f) ? f : path.join(home, 'tieba-duty', f)
+    try { return { source: abs, text: fs.readFileSync(abs, 'utf8').slice(0, 20000) } } catch {
+      return { source: abs, text: '', error: '人设文件读不到：' + abs }
+    }
+  }
+  return { source: '', text: String(cfg.personaText || '') }
+}
+
 /** 最近一次错误（给设置页红点用）；只在内存里，重启即清 */
 let lastError = null
 const noteError = (where, e) => {
@@ -335,7 +348,7 @@ export function apply(ctx, config = {}) {
             roundRunning = true
             const roundId = startRound('manual').id
             const logPath = logFile()
-            runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin })
+            runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin, roundId })
               .then((r) => log(`一轮结束：ok=${r.ok} code=${r.code ?? '-'}`))
               .catch((e) => log(`一轮出错：${e?.message ?? e}`))
               .finally(() => { roundRunning = false; endRound(roundId) })
@@ -720,11 +733,11 @@ export function apply(ctx, config = {}) {
       if (cfg.valleyOnly && !isValley()) { log('现在是高峰，等谷时再跑'); return }
     }
     roundRunning = true
-    startRound('auto')
+    const r0 = startRound('auto')
     try {
       const s0 = freshState(); s0.lastRunAt = Date.now(); writeState(s0)
       log(`自动跑一轮：profile=${cfg.headlessProfile}`)
-      const r = await runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin })
+      const r = await runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin, roundId: r0.id })
       if (r.ok) { const s2 = freshState(); s2.lastRunDate = today(); s2.round = null; writeState(s2); log('一轮跑成功了') }
       else { endRound() }
       log(`一轮结束：ok=${r.ok} code=${r.code ?? '-'} 日志=${r.log}`)
@@ -734,7 +747,7 @@ export function apply(ctx, config = {}) {
   }
   if (NO_SCHEDULE) {
     log('在 headless 子进程里：不启动调度器（防自我复制）')
-    startHeartbeat()
+    startHeartbeat(process.env.TIEBA_ROUND_ID || '')
   } else {
     const runTimer = setInterval(() => { maybeAutoRun().catch(() => {}) }, 60_000)
     ctx.effect(() => () => clearInterval(runTimer), 'tieba-duty: 每日一轮定时器')

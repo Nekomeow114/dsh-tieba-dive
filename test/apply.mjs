@@ -18,10 +18,10 @@ const ok = (cond, label, extra = '') => {
 
 /** 造一个假 ctx；withWeb=false 时**连 webServer 属性都没有**，模拟 headless */
 function makeCtx(withWeb) {
-  const calls = { tools: [], routes: [], settings: 0, effects: 0 }
+  const calls = { tools: [], routes: [], settings: 0, effects: 0, toolObjs: [] }
   const ctx = {
     settings: { register: () => { calls.settings += 1 } },
-    tools: { register: (t) => calls.tools.push(t.name) },
+    tools: { register: (t) => { calls.tools.push(t.name); calls.toolObjs.push(t) } },
     effect: (fn) => { calls.effects += 1; try { fn() } catch { /* ignore */ } },
     get: (name) => (withWeb && name === 'webServer' ? ctx.webServer : undefined),
     // Cordis 的动态注入：服务就绪才回调；这里模拟「有就立刻回调」
@@ -38,6 +38,14 @@ try { mod.apply(a.ctx, {}) } catch (e) { errA = e?.message || String(e) }
 ok(!errA, 'headless：apply() 不抛错', errA)
 ok(a.calls.routes.length === 0, 'headless：不注册路由')
 ok(a.calls.tools.length >= 12, 'headless：工具照常挂上', String(a.calls.tools.length))
+
+// 抓那种「函数被删了但工具还在注册」的事故：persona 曾经就是这样
+const personaTool = a.calls.toolObjs.find((t) => t.name === 'tieba_persona')
+let personaRes = null
+let personaErr = ''
+try { personaRes = await personaTool.execute({}) } catch (e) { personaErr = e?.message || String(e) }
+ok(!personaErr && personaRes && typeof personaRes === 'object' && 'text' in personaRes,
+  'persona 工具可执行且返回对象', personaErr || '')
 ok(a.calls.effects >= 1, 'headless：定时器挂上')
 
 // 场景 B：web（有 webServer）
