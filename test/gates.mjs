@@ -60,6 +60,15 @@ const now = new Date()
 const expect = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
 ok(localToday() === expect, '本地日期：与本地年月日一致', localToday() + ' vs ' + expect)
 
+// 3.8 一轮存活判断（宽限期 + 心跳）
+const { roundAlive, GRACE_MS, HB_FRESH_MS } = await import('../lib/round-state.mjs')
+const tsNow = Date.now()
+ok(roundAlive({ running: false }) === false, '存活：没在跑就是 false')
+ok(roundAlive({ running: true, startedAt: tsNow - 10_000, hbAt: 0, now: tsNow }), '存活：宽限期内没心跳也算在跑')
+ok(!roundAlive({ running: true, startedAt: tsNow - GRACE_MS - 1, hbAt: 0, now: tsNow }), '存活：过宽限期且没心跳 → 结束')
+ok(roundAlive({ running: true, startedAt: tsNow - GRACE_MS - 1, hbAt: tsNow - 30_000, now: tsNow }), '存活：过宽限期但心跳新鲜 → 还在跑')
+ok(!roundAlive({ running: true, startedAt: tsNow - GRACE_MS - 1, hbAt: tsNow - HB_FRESH_MS - 1, now: tsNow }), '存活：心跳也过期 → 结束')
+
 // 4. 状态日切
 const st = freshState()
 st.replies = 3
