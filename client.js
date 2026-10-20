@@ -65,6 +65,11 @@ window.__ModuleLoader__.load({
       .tb-sw { display: flex; align-items: center; gap: 8px; margin: 7px 0; }
       .tb-pre { white-space: pre-wrap; max-height: 220px; overflow: auto; margin-top: 8px;
         background: #f7faff; border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+      .tb-loading { display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 12px; min-height: 220px; color: #6b86a8; font-size: 13px; }
+      .tb-spinner { width: 26px; height: 26px; border-radius: 50%;
+        border: 3px solid #dbe7f7; border-top-color: #2d6cdf; animation: tb-spin .8s linear infinite; }
+      @keyframes tb-spin { to { transform: rotate(360deg); } }
       .tb-warn { background: #fff8e6; border: 1px solid #f0d9a0; color: #7a5a12;
         padding: 9px 11px; border-radius: 8px; font-size: 12px; line-height: 1.7; margin: 10px 0; }
     `
@@ -233,6 +238,17 @@ window.__ModuleLoader__.load({
       const runSelfcheck = async () => {
         setBusy(true)
         try { setHealth(await jget('/health')) } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+      }
+
+      // 配置还没读回来之前，只显示载入态（避免先闪一堆空输入框）
+      if (!status || !cfg) {
+        return h('div', { className: 'tb tb-loading' }, [
+          h('div', { key: 's', className: 'tb-spinner' }),
+          h('div', { key: 't' }, '正在读取插件配置…'),
+          (status && status.ok === false)
+            ? h('button', { key: 'r', className: 'tb-btn ghost sm', disabled: busy, onClick: refresh }, '重试')
+            : null,
+        ])
       }
 
       const c = cfg || { bars: [], readPerRound: 5, replyPerRound: 1, replyPerDay: 3, replyGapSec: 30, requestGapMs: 1200, signHour: 9, runHour: 21 }
@@ -497,6 +513,7 @@ window.__ModuleLoader__.load({
           h('button', { key: 'b', className: 'tb-btn ghost sm', disabled: busy, onClick: runSelfcheck }, '运行自检'),
           health ? h('span', { key: 'k', className: 'tb-kv' },
             'curl ' + (health.curl && health.curl.ok ? '✓' : '✗')
+            + (health.curl && health.curl.bin ? '（' + health.curl.bin + '）' : '')
             + ' · 凭证 ' + (health.cookie && health.cookie.ok ? '✓' : '✗')
             + ' · 目录 ' + (health.dirs && health.dirs.writable ? '✓' : '✗')
             + ' · headless ' + (health.headless && health.headless.ok ? '✓' : '✗')) : null,

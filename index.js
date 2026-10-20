@@ -54,14 +54,27 @@ const noteError = (where, e) => {
 
 /** curl 是网络层的命根子，启动就先看一眼 */
 let curlCache = null
+/** 候选路径：DSH 进程的 PATH 可能和终端不一样，逐个试绝对路径 */
+const CURL_CANDIDATES = [
+  process.env.CURL_BIN,
+  'curl',
+  '/usr/bin/curl',
+  '/bin/curl',
+  '/usr/local/bin/curl',
+  '/system/bin/curl',
+  '/data/data/com.termux/files/usr/bin/curl',
+].filter(Boolean)
+
 function checkCurl(force = false) {
   if (!force && curlCache && Date.now() - curlCache.at < 5 * 60_000) return curlCache.value
-  let value
-  try {
-    const out = execFileSync('curl', ['--version'], { encoding: 'utf8', timeout: 5000 })
-    value = { ok: true, version: String(out).split('\n')[0].trim() }
-  } catch (e) {
-    value = { ok: false, error: '找不到 curl（网络层的请求都靠它）' }
+  let value = { ok: false, error: '找不到 curl（网络层的请求都靠它）' }
+  for (const bin of CURL_CANDIDATES) {
+    try {
+      const out = execFileSync(bin, ['--version'], { encoding: 'utf8', timeout: 5000 })
+      value = { ok: true, version: String(out).split('\n')[0].trim(), bin }
+      tieba.setCurlBin(bin)
+      break
+    } catch { /* 试下一个 */ }
   }
   curlCache = { at: Date.now(), value }
   return value
@@ -90,6 +103,9 @@ export function apply(ctx, config = {}) {
   // ⚠️ headless 子进程里**不许**再起调度器：否则子进程里的插件又会触发定时器，
   //    子子孙孙一直起（真机上真的发生了，日志里每 1~3 分钟一轮）。
   const NO_SCHEDULE = process.env.TIEBA_DUTY_NO_SCHEDULE === '1'
+
+  // 尽早解析一次 curl 的绝对路径（进程 PATH 可能不含 /usr/bin）
+  try { checkCurl(true) } catch { /* 后面还有兜底 */ }
 
   const cfgOf = () => {
     const c = readConfig(config)
@@ -737,7 +753,7 @@ export function apply(ctx, config = {}) {
   }, 60_000)
   ctx.effect(() => () => clearInterval(timer), 'tieba-duty: 签到定时器')
 
-  const curl0 = checkCurl()
+  const curl0 = checkCurl(true)
   if (!curl0.ok) log('⚠️ 找不到 curl —— 贴吧请求会全部失败，请先装 curl')
   else log(`curl ✓ ${curl0.version}`)
 
