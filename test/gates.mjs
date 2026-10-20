@@ -67,7 +67,7 @@ st.date = '2000-01-01'
 writeState(st)
 const st2 = freshState()
 ok(st2.replies === 0, '状态：跨天自动清零回帖数')
-ok(st2.date === new Date().toISOString().slice(0, 10), '状态：日期跟今天一致')
+ok(st2.date === localToday(), '状态：日期跟今天一致（本地时区）')
 
 console.log(bad ? `\n${bad} 项失败` : '\n全部通过')
 fs.rmSync(tmp, { recursive: true, force: true })
