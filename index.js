@@ -18,7 +18,7 @@ import { freshState, writeState, audit, pruneSeen, today } from './lib/state.mjs
 import { appendDiary, readDiary, diaryStats, diaryFile } from './lib/diary.mjs'
 import { writeReport, readReport, listReports, reportsDir } from './lib/reports.mjs'
 import { toneCheck } from './lib/tone.mjs'
-import { runRound, readLog, logFile, stopRound, isRunning } from './lib/runner.mjs'
+import { runRound, readLog, logFile, stopRound, isRunning, startHeartbeat, heartbeatFresh } from './lib/runner.mjs'
 import { isValley, nextValley, peakLabel, currentWindow } from './lib/peak.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -304,10 +304,12 @@ export function apply(ctx, config = {}) {
               roundRunning = false
               endRound()
             }
-            // 子进程已经没了，但标志还没清（close 事件可能不来）→ 立刻复位
-            if (roundRunning && !isRunning()) {
-              log('子进程已结束，复位本轮状态')
+            // 存活判断：优先看子进程心跳（dsh 启动器退出后 node 子进程仍在跑，
+            // 用进程句柄会误判成「已结束」）。心跳 90 秒没更新才算真的没了。
+            if (roundRunning && !heartbeatFresh()) {
+              log('心跳超过 90 秒没更新，判定本轮结束，复位状态')
               roundRunning = false
+              collecting = false
               endRound()
             }
             const st = freshState()
@@ -707,6 +709,7 @@ export function apply(ctx, config = {}) {
   }
   if (NO_SCHEDULE) {
     log('在 headless 子进程里：不启动调度器（防自我复制）')
+    startHeartbeat()
   } else {
     const runTimer = setInterval(() => { maybeAutoRun().catch(() => {}) }, 60_000)
     ctx.effect(() => () => clearInterval(runTimer), 'tieba-duty: 每日一轮定时器')
