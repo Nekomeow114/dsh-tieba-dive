@@ -18,7 +18,7 @@ import { freshState, writeState, audit, pruneSeen, today } from './lib/state.mjs
 import { appendDiary, readDiary, diaryStats, diaryFile } from './lib/diary.mjs'
 import { writeReport, readReport, listReports, reportsDir } from './lib/reports.mjs'
 import { toneCheck } from './lib/tone.mjs'
-import { runRound, readLog, logFile } from './lib/runner.mjs'
+import { runRound, readLog, logFile, stopRound } from './lib/runner.mjs'
 import { isValley, nextValley, peakLabel, currentWindow } from './lib/peak.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -90,6 +90,19 @@ export function apply(ctx, config = {}) {
     tieba.setGap(c.requestGapMs)
     tieba.setBreakerMinutes(c.breakerMin)
     return c
+  }
+
+  /** 开一轮：重置本轮计数（每轮上限靠它硬拦） */
+  const startRound = () => {
+    const st = freshState()
+    st.round = { id: Date.now(), startedAt: Date.now(), replies: 0 }
+    writeState(st)
+    return st.round
+  }
+  /** 结束一轮 */
+  const endRound = () => {
+    const st = freshState()
+    if (st.round) { st.round = null; writeState(st) }
   }
 
   const tool = (spec) => {
@@ -183,6 +196,14 @@ export function apply(ctx, config = {}) {
       handler: async (req, res) => {
         const sub = new URL(req.url, 'http://127.0.0.1').pathname.replace('/api/tieba-duty', '') || '/'
         try {
+          if (sub === '/run/stop' && req.method === 'POST') {
+            const r = stopRound()
+            roundRunning = false
+            collecting = false
+            endRound()
+            log('手动停止本轮：' + (r.ok ? '已发信号' : r.error))
+            return sendJson(res, 200, { ok: true, ...r })
+          }
           if (sub === '/cooldown/clear' && req.method === 'POST') {
             tieba.clearCooldown()
             return sendJson(res, 200, { ok: true })
@@ -221,6 +242,7 @@ export function apply(ctx, config = {}) {
           if (sub === '/run' && req.method === 'POST') {
             if (collecting || roundRunning) return sendJson(res, 409, { ok: false, error: '已经有一轮在跑了' })
             collecting = true
+            startRound()
             // 只采集、不生成：把这一轮读到的原始内容落成 raw-YYYY-MM-DD.json，模型再据此写日报
             const st = freshState()
             const cutoff = Date.now() - cfg.dedupeDays * 86400_000
@@ -256,11 +278,12 @@ export function apply(ctx, config = {}) {
           if (sub === '/run-headless' && req.method === 'POST') {
             if (roundRunning) return sendJson(res, 409, { ok: false, error: '已经有一轮在跑了' })
             roundRunning = true
+            startRound()
             const logPath = logFile()
             runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin })
               .then((r) => log(`一轮结束：ok=${r.ok} code=${r.code ?? '-'}`))
               .catch((e) => log(`一轮出错：${e?.message ?? e}`))
-              .finally(() => { roundRunning = false })
+              .finally(() => { roundRunning = false; endRound() })
             // 立刻返回：模型那一轮在后台跑，界面别挂着
             return sendJson(res, 200, {
               ok: true, started: true, log: logPath,
@@ -268,6 +291,12 @@ export function apply(ctx, config = {}) {
             })
           }
           if (sub === '/run-status' && req.method === 'GET') {
+            const stNow = freshState()
+            if (roundRunning && stNow.round && Date.now() - (stNow.round.startedAt || 0) > 25 * 60_000) {
+              log('本轮跑了超过 25 分钟，判定卡住，复位')
+              roundRunning = false
+              endRound()
+            }
             const st = freshState()
             return sendJson(res, 200, {
               ok: true,
@@ -557,6 +586,12 @@ export function apply(ctx, config = {}) {
       if (!tieba.hasCookie()) return json({ ok: false, error: '还没贴 BDUSS' })
 
       const st = freshState()
+      if (st.round) {
+        const used = Number(st.round.replies) || 0
+        if (used >= cfg.replyPerRound) {
+          return json({ ok: false, error: `本轮额度用完了（每轮 ${cfg.replyPerRound} 条）—— 停手，等下一轮` })
+        }
+      }
       if (st.replies >= cfg.replyPerDay) return json({ ok: false, error: `今天的额度用完了（${cfg.replyPerDay} 条）` })
       const gap = Date.now() - st.lastReplyAt
       if (gap < cfg.replyGapSec * 1000) {
@@ -582,6 +617,7 @@ export function apply(ctx, config = {}) {
       if (r.ok) {
         st.replies += 1
         st.lastReplyAt = Date.now()
+        if (st.round) st.round.replies = (Number(st.round.replies) || 0) + 1
         st.seen[`reply:${args.tid}`] = Date.now()
         st.replied = st.replied || {}
         st.replied[String(args.tid)] = { kw: String(args.kw), at: Date.now(), content: body.slice(0, 200) }
@@ -626,7 +662,8 @@ export function apply(ctx, config = {}) {
       const s0 = freshState(); s0.lastRunAt = Date.now(); writeState(s0)
       log(`自动跑一轮：profile=${cfg.headlessProfile}`)
       const r = await runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin })
-      if (r.ok) { const s2 = freshState(); s2.lastRunDate = today(); writeState(s2); log('一轮跑成功了') }
+      if (r.ok) { const s2 = freshState(); s2.lastRunDate = today(); s2.round = null; writeState(s2); log('一轮跑成功了') }
+      else { endRound() }
       log(`一轮结束：ok=${r.ok} code=${r.code ?? '-'} 日志=${r.log}`)
     } catch (e) {
       log(`跑一轮出错：${e?.message ?? e}`)

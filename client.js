@@ -343,6 +343,13 @@ window.__ModuleLoader__.load({
             h('button', { key: 'r', className: 'tb-btn', disabled: busy || running, onClick: runRound },
               live && live.collecting ? '采集中…' : (live && live.running ? '模型轮进行中…' : '刷一轮贴吧')),
             h('button', { key: 'p', className: 'tb-btn ghost', disabled: busy, onClick: showReport }, '看最近日报'),
+            running ? h('button', { key: 's', className: 'tb-btn ghost', disabled: busy,
+              onClick: async () => {
+                setBusy(true)
+                try { const r = await jpost('/run/stop', {}); setMsg({ ok: true, text: r.ok ? '已发送停止信号，本轮结束' : (r.error || '没停掉') }) }
+                catch (e) { setMsg({ ok: false, text: String(e.message || e) }) }
+                finally { setBusy(false); setTimeout(refresh, 800) }
+              } }, '停止本轮') : null,
           ]),
           report ? h('pre', { key: 'rp', className: 'tb-pre' }, report.text || '（空）') : null,
         ]),
