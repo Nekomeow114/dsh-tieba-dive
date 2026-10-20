@@ -18,8 +18,9 @@ import { freshState, writeState, audit, pruneSeen, today } from './lib/state.mjs
 import { appendDiary, readDiary, diaryStats, diaryFile } from './lib/diary.mjs'
 import { writeReport, readReport, listReports, reportsDir } from './lib/reports.mjs'
 import { toneCheck } from './lib/tone.mjs'
-import { runRound, readLog, logFile, stopRound, isRunning, startHeartbeat, heartbeatFresh } from './lib/runner.mjs'
+import { runRound, readLog, logFile, stopRound, startHeartbeat, heartbeatFresh } from './lib/runner.mjs'
 import { isValley, nextValley, peakLabel, currentWindow } from './lib/peak.mjs'
+import { localStamp } from './lib/time.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
@@ -38,7 +39,7 @@ export const Config = !z ? undefined : z.object({
   bars: z.array(z.string()).default(DEFAULTS.bars),
   autoSign: z.boolean().default(false),
   autoReply: z.boolean().default(false),
-  replyPerDay: z.natural().default(3),
+  replyPerDay: z.natural().default(DEFAULTS.replyPerDay),
   replyGapSec: z.natural().default(30),
 })
 
@@ -47,18 +48,23 @@ const log = (...a) => console.log('[tieba-duty]', ...a)
 /** 最近一次错误（给设置页红点用）；只在内存里，重启即清 */
 let lastError = null
 const noteError = (where, e) => {
-  lastError = { at: new Date().toISOString(), where, message: String((e && e.message) || e) }
+  lastError = { at: localStamp(), where, message: String((e && e.message) || e) }
   log(`出错（${where}）：${lastError.message}`)
 }
 
 /** curl 是网络层的命根子，启动就先看一眼 */
-function checkCurl() {
+let curlCache = null
+function checkCurl(force = false) {
+  if (!force && curlCache && Date.now() - curlCache.at < 5 * 60_000) return curlCache.value
+  let value
   try {
     const out = execFileSync('curl', ['--version'], { encoding: 'utf8', timeout: 5000 })
-    return { ok: true, version: String(out).split('\n')[0].trim() }
+    value = { ok: true, version: String(out).split('\n')[0].trim() }
   } catch (e) {
-    return { ok: false, error: '找不到 curl（网络层的请求都靠它）' }
+    value = { ok: false, error: '找不到 curl（网络层的请求都靠它）' }
   }
+  curlCache = { at: Date.now(), value }
+  return value
 }
 
 function checkDirWritable(dir) {
@@ -104,6 +110,25 @@ export function apply(ctx, config = {}) {
   const endRound = () => {
     const st = freshState()
     if (st.round) { st.round = null; writeState(st) }
+  }
+
+  /** 签一批吧：kw 指定则只签一个；否则签配置里的，signAllFollowed 时并上全部关注 */
+  const doSign = async (kw) => {
+    const cfg = cfgOf()
+    let bars = kw ? [String(kw)] : [...cfg.bars]
+    if (!kw && cfg.signAllFollowed) {
+      try { bars = [...new Set([...bars, ...(await tieba.followedForums())])] }
+      catch (e) { log(`拉取关注列表失败（只签框里的）：${e.message}`) }
+    }
+    const out = []
+    for (const b of bars) {
+      try {
+        const r = await tieba.followAndSign(b, { autoFollow: cfg.autoFollow })
+        if (r.ok) { const st = freshState(); st.signed[b] = today(); writeState(st) }
+        out.push(r)
+      } catch (e) { out.push({ ok: false, kw: b, error: e.message }) }
+    }
+    return out
   }
 
   const tool = (spec) => {
@@ -243,7 +268,7 @@ export function apply(ctx, config = {}) {
           if (sub === '/run' && req.method === 'POST') {
             if (collecting || roundRunning) return sendJson(res, 409, { ok: false, error: '已经有一轮在跑了' })
             collecting = true
-            startRound('manual')
+            startRound('collect')
             // 只采集、不生成：把这一轮读到的原始内容落成 raw-YYYY-MM-DD.json，模型再据此写日报
             const st = freshState()
             const cutoff = Date.now() - cfg.dedupeDays * 86400_000
@@ -271,6 +296,7 @@ export function apply(ctx, config = {}) {
             fs.mkdirSync(reportsDir(), { recursive: true })
             fs.writeFileSync(file, JSON.stringify({ at, bars }, null, 1))
             collecting = false
+            endRound()
             return sendJson(res, 200, {
               ok: true, at, file,
               bars: bars.map((b) => ({ kw: b.kw, fresh: b.fresh, read: (b.threads || []).length, error: b.error })),
@@ -357,19 +383,12 @@ export function apply(ctx, config = {}) {
           }
           if (sub === '/test' && req.method === 'GET') return sendJson(res, 200, await tieba.whoami())
           if (sub === '/sign' && req.method === 'POST') {
-            const out = []
-            for (const kw of cfg.bars) {
-              try {
-          const r = await tieba.followAndSign(kw, { autoFollow: cfg.autoFollow })
-          if (r.ok) { const st = freshState(); st.signed[kw] = today(); writeState(st) }
-          out.push(r)
-        } catch (e) { out.push({ ok: false, kw, error: e.message }) }
-            }
-            return sendJson(res, 200, { ok: true, results: out })
+            return sendJson(res, 200, { ok: true, results: await doSign() })
           }
           return sendJson(res, 404, { ok: false, error: `unknown ${req.method} ${sub}` })
         } catch (e) {
           collecting = false
+          endRound()
           noteError('HTTP ' + sub, e)
           return sendJson(res, 500, { ok: false, error: e?.message ?? String(e) })
         }
@@ -555,6 +574,7 @@ export function apply(ctx, config = {}) {
       }))
       withHit.sort((a, b) => (b.matched.length - a.matched.length) || (a.seen - b.seen))
       const fresh = withHit.filter((t) => !t.seen)
+      try { st.seen = pruneSeen(st.seen); writeState(st) } catch { /* 清不动就算了 */ }
       const threads = (args.onlyFresh === true ? fresh : withHit).slice(0, 120)
       return json({ kw, fid, count: all.length, fresh: fresh.length, threads })
     },
@@ -582,27 +602,9 @@ export function apply(ctx, config = {}) {
 
   tool({
     name: 'tieba_sign',
-    description: '签到。不给 kw 就签配置里的所有吧；一天一次，重复会返回「已签到」。',
+    description: '签到。不给 kw 就签配置里的所有吧（signAllFollowed 开启时并上全部关注）；一天一次。',
     parameters: { kw: { type: 'string', description: '只签某一个吧（可省）' } },
-    execute: async (args) => {
-      const cfg = cfgOf()
-      let bars = args.kw ? [String(args.kw)] : [...cfg.bars]
-      if (!args.kw && cfg.signAllFollowed) {
-        try {
-          const followed = await tieba.followedForums()
-          bars = [...new Set([...bars, ...followed])]
-        } catch (e) { log(`拉取关注列表失败（只签框里的）：${e.message}`) }
-      }
-      const out = []
-      for (const kw of bars) {
-        try {
-          const r = await tieba.followAndSign(kw, { autoFollow: cfg.autoFollow })
-          if (r.ok) { const st = freshState(); st.signed[kw] = today(); writeState(st) }
-          out.push(r)
-        } catch (e) { out.push({ ok: false, kw, error: e.message }) }
-      }
-      return json({ ok: true, results: out })
-    },
+    execute: async (args) => json({ ok: true, results: await doSign(args.kw) }),
   })
 
   tool({
@@ -696,6 +698,7 @@ export function apply(ctx, config = {}) {
       if (cfg.valleyOnly && !isValley()) { log('现在是高峰，等谷时再跑'); return }
     }
     roundRunning = true
+    startRound('auto')
     try {
       const s0 = freshState(); s0.lastRunAt = Date.now(); writeState(s0)
       log(`自动跑一轮：profile=${cfg.headlessProfile}`)
