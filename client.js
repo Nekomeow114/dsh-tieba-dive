@@ -252,7 +252,12 @@ window.__ModuleLoader__.load({
             + (status && c.autoReply && (status.repliesToday || 0) >= (c.replyPerDay ?? 5) ? ' · 额度已满' : '')),
           h('span', { key: 'c', className: 'tb-chip ' + (status && status.valley && status.valley.isValley ? 'ok' : 'warn') },
             status && status.valley ? '现在：' + status.valley.now : '峰谷：未知'),
-          h('span', { key: 'd', className: 'tb-chip' }, live && live.busy ? (live.collecting ? '采集中…' : '模型轮进行中…') : '空闲'),
+          h('span', { key: 'd', className: 'tb-chip ' + (live && live.busy ? 'warn' : '') },
+            !live ? '状态…'
+              : live.busy
+                ? (live.collecting ? '采集中…' : ('模型轮进行中' + (live.round && live.round.trigger === 'auto' ? '（自动）' : '（手动）')
+                  + (live.round && live.round.startedAt ? ' · ' + new Date(live.round.startedAt).toTimeString().slice(0, 5) + ' 起' : '')))
+                : '空闲'),
           h('span', { key: 'e', className: 'tb-chip' }, live && live.lastRunDate ? '上次跑完 ' + live.lastRunDate : '还没跑过'),
         ]),
 

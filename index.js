@@ -93,10 +93,11 @@ export function apply(ctx, config = {}) {
   }
 
   /** 开一轮：重置本轮计数（每轮上限靠它硬拦） */
-  const startRound = () => {
+  const startRound = (trigger = 'manual') => {
     const st = freshState()
-    st.round = { id: Date.now(), startedAt: Date.now(), replies: 0 }
+    st.round = { id: Date.now(), startedAt: Date.now(), replies: 0, trigger }
     writeState(st)
+    log(`开始一轮（${trigger === 'auto' ? '自动' : '手动'}）`)
     return st.round
   }
   /** 结束一轮 */
@@ -242,7 +243,7 @@ export function apply(ctx, config = {}) {
           if (sub === '/run' && req.method === 'POST') {
             if (collecting || roundRunning) return sendJson(res, 409, { ok: false, error: '已经有一轮在跑了' })
             collecting = true
-            startRound()
+            startRound('manual')
             // 只采集、不生成：把这一轮读到的原始内容落成 raw-YYYY-MM-DD.json，模型再据此写日报
             const st = freshState()
             const cutoff = Date.now() - cfg.dedupeDays * 86400_000
@@ -284,7 +285,7 @@ export function apply(ctx, config = {}) {
               }
             }
             roundRunning = true
-            startRound()
+            startRound('manual')
             const logPath = logFile()
             runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin })
               .then((r) => log(`一轮结束：ok=${r.ok} code=${r.code ?? '-'}`))
@@ -314,6 +315,7 @@ export function apply(ctx, config = {}) {
               ok: true,
               running: roundRunning,
               collecting,
+              round: freshState().round,
               busy: roundRunning || collecting,
               lastRunDate: st.lastRunDate || '',
               repliesToday: st.replies,
