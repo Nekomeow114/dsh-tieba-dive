@@ -246,7 +246,10 @@ window.__ModuleLoader__.load({
         // ── 状态带 ──
         h('div', { key: 'chips', className: 'tb-chips' }, [
           h('span', { key: 'a', className: 'tb-chip ' + (hasCookie ? 'ok' : 'warn') }, hasCookie ? '凭证 ✓' : '未登录'),
-          h('span', { key: 'b', className: 'tb-chip' }, '今天已回 ' + (status ? (status.repliesToday || 0) : '–') + ' 条'),
+          h('span', { key: 'b', className: 'tb-chip ' + (status && c.autoReply && (status.repliesToday || 0) >= (c.replyPerDay ?? 5) ? 'warn' : '') },
+            '今天已回 ' + (status ? (status.repliesToday || 0) : '–')
+            + (c.autoReply ? '/' + (c.replyPerDay ?? 5) : '') + ' 条'
+            + (status && c.autoReply && (status.repliesToday || 0) >= (c.replyPerDay ?? 5) ? ' · 额度已满' : '')),
           h('span', { key: 'c', className: 'tb-chip ' + (status && status.valley && status.valley.isValley ? 'ok' : 'warn') },
             status && status.valley ? '现在：' + status.valley.now : '峰谷：未知'),
           h('span', { key: 'd', className: 'tb-chip' }, live && live.busy ? (live.collecting ? '采集中…' : '模型轮进行中…') : '空闲'),
