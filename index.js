@@ -27,6 +27,8 @@ import path from 'node:path'
 import os from 'node:os'
 import { execFileSync } from 'node:child_process'
 
+let VERSION = '0.0.0'
+try { VERSION = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version } catch { /* ignore */ }
 export const name = 'tieba-scroll'
 // ⚠️ webServer 不能写进 inject：headless profile 没有这个服务，写进去整个插件会 pending，工具全不可用。
 // 这里只声明真正必需的，webServer 在 apply 里按需取。
@@ -124,9 +126,12 @@ export function apply(ctx, config = {}) {
     return st.round
   }
   /** 结束一轮 */
-  const endRound = () => {
+  const endRound = (onlyId) => {
     const st = freshState()
-    if (st.round) { st.round = null; writeState(st) }
+    if (!st.round) return
+    if (onlyId && st.round.id !== onlyId) return
+    st.round = null
+    writeState(st)
   }
 
   /** 签一批吧：kw 指定则只签一个；否则签配置里的，signAllFollowed 时并上全部关注 */
@@ -243,7 +248,7 @@ export function apply(ctx, config = {}) {
             const r = stopRound()
             roundRunning = false
             collecting = false
-            endRound()
+            endRound(collectId)
             log('手动停止本轮：' + (r.ok ? '已发信号' : r.error))
             return sendJson(res, 200, { ok: true, ...r })
           }
@@ -285,7 +290,7 @@ export function apply(ctx, config = {}) {
           if (sub === '/run' && req.method === 'POST') {
             if (collecting || roundRunning) return sendJson(res, 409, { ok: false, error: '已经有一轮在跑了' })
             collecting = true
-            startRound('collect')
+            const collectId = startRound('collect').id
             // 只采集、不生成：把这一轮读到的原始内容落成 raw-YYYY-MM-DD.json，模型再据此写日报
             const st = freshState()
             const cutoff = Date.now() - cfg.dedupeDays * 86400_000
@@ -313,7 +318,7 @@ export function apply(ctx, config = {}) {
             fs.mkdirSync(reportsDir(), { recursive: true })
             fs.writeFileSync(file, JSON.stringify({ at, bars }, null, 1))
             collecting = false
-            endRound()
+            endRound(collectId)
             return sendJson(res, 200, {
               ok: true, at, file,
               bars: bars.map((b) => ({ kw: b.kw, fresh: b.fresh, read: (b.threads || []).length, error: b.error })),
@@ -328,12 +333,12 @@ export function apply(ctx, config = {}) {
               }
             }
             roundRunning = true
-            startRound('manual')
+            const roundId = startRound('manual').id
             const logPath = logFile()
             runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin })
               .then((r) => log(`一轮结束：ok=${r.ok} code=${r.code ?? '-'}`))
               .catch((e) => log(`一轮出错：${e?.message ?? e}`))
-              .finally(() => { roundRunning = false; endRound() })
+              .finally(() => { roundRunning = false; endRound(roundId) })
             // 立刻返回：模型那一轮在后台跑，界面别挂着
             return sendJson(res, 200, {
               ok: true, started: true, log: logPath,
@@ -358,6 +363,7 @@ export function apply(ctx, config = {}) {
             const st = freshState()
             return sendJson(res, 200, {
               ok: true,
+              version: VERSION,
               running: roundRunning,
               collecting,
               round: freshState().round,
@@ -405,7 +411,6 @@ export function apply(ctx, config = {}) {
           return sendJson(res, 404, { ok: false, error: `unknown ${req.method} ${sub}` })
         } catch (e) {
           collecting = false
-          endRound()
           noteError('HTTP ' + sub, e)
           return sendJson(res, 500, { ok: false, error: e?.message ?? String(e) })
         }

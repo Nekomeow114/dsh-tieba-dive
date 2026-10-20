@@ -256,7 +256,8 @@ window.__ModuleLoader__.load({
       const hasCookie = !!(status && status.hasCookie)
 
       return h('div', { className: 'tb' }, [
-        h('div', { key: 'h', className: 'tb-h' }, '刷贴吧'),
+        h('div', { key: 'h', className: 'tb-h' }, ['刷贴吧', h('span', { key: 'v', className: 'tb-tag' },
+          'v' + ((live && live.version) || (status && status.version) || '?'))]),
         h('div', { key: 's', className: 'tb-sub' }, '每天替你看几个吧：读帖、写日报、签到，回帖可选。'),
 
         // ── 状态带 ──
