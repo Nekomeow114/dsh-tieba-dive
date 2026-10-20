@@ -38,6 +38,9 @@ window.__ModuleLoader__.load({
         padding: 4px 10px; font-size: 12px; line-height: 1.4; }
       .tb-chip.ok { background: #e8f7ee; color: #178a4c; }
       .tb-chip.warn { background: #fff6e5; color: #8a6414; }
+      .tb-chip.run { background: #e8f2ff; color: #1f5aa8; }
+      .tb-chip.run::before { content: '●'; color: #2d6cdf; margin-right: 5px; animation: tb-pulse 1.2s ease-in-out infinite; }
+      @keyframes tb-pulse { 50% { opacity: .3; } }
       .tb-card { border: 1px solid #e2eaf5; border-radius: 12px; background: #fff;
         padding: 12px 14px; margin-bottom: 12px; }
       .tb-card > summary { cursor: pointer; font-weight: 600; list-style: none; }
@@ -269,13 +272,13 @@ window.__ModuleLoader__.load({
             + (status && c.autoReply && (status.repliesToday || 0) >= (c.replyPerDay ?? 5) ? ' · 额度已满' : '')),
           h('span', { key: 'c', className: 'tb-chip ' + (status && status.valley && status.valley.isValley ? 'ok' : 'warn') },
             status && status.valley ? '现在：' + status.valley.now : '峰谷：未知'),
-          h('span', { key: 'd', className: 'tb-chip ' + (live && live.busy ? 'warn' : '') },
-            !live ? '状态…'
+          h('span', { key: 'd', className: 'tb-chip ' + (live && live.busy ? 'run' : '') },
+            !live ? '状态读取中…'
               : live.busy
-                ? (live.collecting ? '采集中…' : ('模型轮进行中' + (live.round && live.round.trigger === 'auto' ? '（自动）' : '（手动）')
-                  + (live.round && live.round.startedAt ? ' · ' + new Date(live.round.startedAt).toTimeString().slice(0, 5) + ' 起' : '')))
-                : '空闲'),
-          h('span', { key: 'e', className: 'tb-chip' }, live && live.lastRunDate ? '上次跑完 ' + live.lastRunDate : '还没跑过'),
+                ? ('后台正在运行中 · ' + (live.collecting ? '采集中' : ('大肥鱼在刷贴吧'
+                  + (live.round && live.round.trigger === 'auto' ? '（自动）' : '（手动）')
+                  + (live.round && live.round.startedAt ? ' · ' + new Date(live.round.startedAt).toTimeString().slice(0, 5) + ' 起' : ''))))
+                : '大肥鱼待命中'),
         ]),
 
         // ── 启动检查：curl 缺了会全线失败，必须最先说 ──
