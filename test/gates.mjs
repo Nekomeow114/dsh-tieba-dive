@@ -54,6 +54,12 @@ ok(r.ok && r.text.includes('deepseek吧'), '日报：latest 能读回来')
 ok(listReports().length === 1, '日报：列表里有 1 份')
 ok(readReport({ date: '2000-01-01' }).ok === false, '日报：没有的日期返回 ok:false')
 
+// 3.5 本地日期（不能是 UTC）
+const { localToday } = await import('../lib/time.mjs')
+const now = new Date()
+const expect = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
+ok(localToday() === expect, '本地日期：与本地年月日一致', localToday() + ' vs ' + expect)
+
 // 4. 状态日切
 const st = freshState()
 st.replies = 3
