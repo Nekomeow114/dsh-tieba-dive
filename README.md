@@ -33,7 +33,10 @@ dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll # 或从仓库
 
 安装后重启一次 dsh，进入 **设置 → 刷贴吧**。
 
-**环境要求**：Node 22+、`curl`（Linux / macOS 自带，Windows 10+ 自带）。定时功能另需在 headless profile 中安装本插件：
+**环境要求**：Node 22+、`curl`（Linux / macOS 自带，Windows 10+ 自带）。
+
+Windows 说明：npm 安装的 `dsh` 是 `.cmd` 启动器，插件会通过 `cmd.exe` 调起，
+并把这一轮的 prompt 落成文件、命令行只传一句「读取该文件」——避免长文本里的引号和换行被 cmd 拆坏。定时功能另需在 headless profile 中安装本插件：
 
 ```bash
 dsh plugin --profile headless add dsh-tieba-scroll

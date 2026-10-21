@@ -109,7 +109,11 @@ function checkDirWritable(dir) {
 function checkHeadless(cfg) {
   let bin = cfg.dshBin || 'dsh'
   try {
-    execFileSync(bin, ['--version'], { encoding: 'utf8', timeout: 8000 })
+    if (process.platform === 'win32') {
+      execFileSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', bin, '--version'], { encoding: 'utf8', timeout: 8000 })
+    } else {
+      execFileSync(bin, ['--version'], { encoding: 'utf8', timeout: 8000 })
+    }
   } catch (e) {
     return { ok: false, error: '找不到 dsh（定时一轮要用它）' }
   }
