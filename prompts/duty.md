@@ -6,6 +6,8 @@
 
 `tieba_settings` —— 看这一轮被允许做什么：吧列表、`readPerRound`、`replyPerRound`、`autoReply`、`answerQuestions`、`toneGate`。
 `tieba_persona` —— 读人设和 `styleSamples`（语气样本）。**回帖前一定读它**，照着样本的长短和口气写。
+装了 `dsh-memory` 时，开工前 `memory_search` 搜一下相关印象（主人偏好、踩过的坑），
+这轮学到稳定的东西再用 `memory_add` 记一条——**不记临时对话，不记凭证**。
 
 ## 1. 列帖
 
