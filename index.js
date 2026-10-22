@@ -23,7 +23,7 @@ import { runRound, readLog, logFile, stopRound, startHeartbeat, heartbeatFresh, 
 import { roundAlive } from './lib/round-state.mjs'
 import { isValley, nextValley, peakLabel, currentWindow } from './lib/peak.mjs'
 import { localStamp } from './lib/time.mjs'
-import { writeManifest, readManifests, emitEvent } from './lib/integrations.mjs'
+import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
@@ -304,6 +304,7 @@ export function apply(ctx, config = {}) {
               bars: cfg.bars || [],
               dirs: { writable: checkDirWritable(tieba.homeDir()) },
               headless: checkHeadless(cfg),
+              integrations: detect(),
               lastError,
             })
           }
@@ -314,6 +315,7 @@ export function apply(ctx, config = {}) {
             return sendJson(res, 200, {
               ok: true,
               hasCookie: tieba.hasCookie(),
+              integrations: detect(),
               curl: checkCurl(),
               cooldown: (() => { const cd = tieba.readCooldown(); return { ...cd, leftMin: Math.max(0, Math.ceil((cd.until - Date.now()) / 60000)) } })(),
               lastError,
@@ -526,6 +528,13 @@ export function apply(ctx, config = {}) {
         lastError,
       })
     },
+  })
+
+  tool({
+    name: 'tieba_integrations',
+    description: '看有哪些其他插件报到（共享目录里的能力清单）。只在刷贴吧内部探测，不依赖别人装什么。',
+    parameters: {},
+    execute: async () => json(detect()),
   })
 
   tool({

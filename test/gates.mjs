@@ -88,5 +88,8 @@ const m = integ.writeManifest({ name: 'test-plugin', version: '1.2.3', provides:
 ok(m.name === 'test-plugin' && m.provides.includes('memory'), 'manifest：写入并带 provides')
 ok(integ.hasCapability('memory') === true, 'manifest：hasCapability 能查到')
 ok(integ.readManifests().some((x) => x.name === 'test-plugin'), 'manifest：readManifests 能列出')
+const det = integ.detect()
+ok(det.caps.memory === true && det.plugins.some((x) => x.name === 'test-plugin'), 'detect：汇总能力与插件')
+ok(integ.capabilitySection().includes('长记忆可用'), 'capabilitySection：有 memory 时提示模型')
 const ev = integ.emitEvent('test.event', { a: 1 })
 ok(ev.line.includes('"type":"test.event"') && ev.file.endsWith('.jsonl'), 'events：一行一条 JSONL')

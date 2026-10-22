@@ -134,7 +134,9 @@ shared/
 - 启动时写自己的清单（`provides: tieba.read / tieba.reply / tieba.digest / tieba.events`）；
 - 每轮开始/结束、每成功回一帖，追加一行事件；
 - 装了 `dsh-memory` 时，`consumes` 会带上 `memory`，`/api/tieba-duty/integrations` 能查到；
-- 对方没装 → 文件不存在，跳过，不报错。
+- 对方没装 → 文件不存在，跳过，不报错；
+- **兼容逻辑只写在刷贴吧自己里**：扫共享目录、探测能力，不修改、也不依赖其他插件的代码；
+- 探测结果会以一小段「这一轮可用的外部能力」拼进 prompt（没有就不占字数），设置页也会显示「已连接：…」。
 
 ## 数据目录
 

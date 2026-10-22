@@ -274,6 +274,12 @@ window.__ModuleLoader__.load({
             status && status.valley ? '现在：' + status.valley.now : '峰谷：未知'),
         ]),
 
+        // ── 已连接的其他插件（没有就不显示）──
+        (status && status.integrations && status.integrations.plugins && status.integrations.plugins.length)
+          ? h('div', { key: 'integ', className: 'tb-kv', style: { marginBottom: 10 } },
+            '已连接：' + status.integrations.plugins.map((p) => p.name + '（' + (p.provides || []).join('、') + '）').join(' · '))
+          : null,
+
         // ── 启动检查：curl 缺了会全线失败，必须最先说 ──
         (status && status.curl && status.curl.ok === false) ? h('div', { key: 'nocurl', className: 'tb-warn', style: { borderColor: '#e8a0a0', background: '#fdeeee', color: '#8a2020' } },
           '机器上没有 curl —— 所有贴吧请求都会失败。先装 curl（Linux/macOS 一般自带，Windows 10+ 也自带），再重启 DSH。') : null,
