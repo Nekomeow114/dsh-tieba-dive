@@ -82,6 +82,14 @@ console.log(bad ? `\n${bad} 项失败` : '\n全部通过')
 fs.rmSync(tmp, { recursive: true, force: true })
 process.exit(bad ? 1 : 0)
 
+// 11.5 楼中楼归属：只回自己评论下面
+const { findMyFloor } = await import('../lib/subreply.mjs')
+const floors = ['咱的评论：这书我也在看', '别人的评论：楼主说得对']
+const subs = [{ pid: '11', floor: 1, text: '真的吗' }, { pid: '22', floor: 2, text: '同意' }]
+ok(findMyFloor({ floors, subReplies: subs, myContent: '这书我也在看', pid: '11' }).ok, '楼中楼：自己评论下的可以回')
+ok(!findMyFloor({ floors, subReplies: subs, myContent: '这书我也在看', pid: '22' }).ok, '楼中楼：别人评论下的拒绝')
+ok(!findMyFloor({ floors, subReplies: subs, myContent: '', pid: '11' }).ok, '楼中楼：没有自己的记录时拒绝')
+
 // 12. 跨插件契约：manifest + events
 const integ = await import('../lib/integrations.mjs')
 const m = integ.writeManifest({ name: 'test-plugin', version: '1.2.3', provides: ['memory'], consumes: [] })

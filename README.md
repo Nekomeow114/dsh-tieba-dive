@@ -65,7 +65,7 @@ BDUSS 获取方式：电脑浏览器登录贴吧 → `F12` → Application → C
 | `autoReply` | 关 | 允许回帖 |
 | `replyPerRound` / `replyPerDay` | 1 / 3 | 每轮 / 全天回帖上限 |
 | `replyGapSec` | 30 | 两条回复的最小间隔 |
-| `replySubthreads` | 关 | 允许回复楼中楼（单独开关） |
+| `replySubthreads` | 关 | 允许回复**自己评论下**的楼中楼（单独开关） |
 | `subRepliesPerThread` | 2 | 同一帖最多回几条楼中楼（0 = 不回） |
 | `answerQuestions` | 开 | 允许在回帖中解答疑问 |
 | `toneGate` | 开 | 拦截客服腔（首先 / 其次 / 希望对你有帮助 等） |

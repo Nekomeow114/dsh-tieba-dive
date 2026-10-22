@@ -24,6 +24,7 @@ import { roundAlive } from './lib/round-state.mjs'
 import { isValley, nextValley, peakLabel, currentWindow } from './lib/peak.mjs'
 import { localStamp } from './lib/time.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
+import { findMyFloor } from './lib/subreply.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
@@ -767,6 +768,11 @@ export function apply(ctx, config = {}) {
       if (gap < cfg.replyGapSec * 1000) return json({ ok: false, error: `太快了，再等 ${Math.ceil((cfg.replyGapSec * 1000 - gap) / 1000)} 秒` })
 
       const tid = String(args.tid), pid = String(args.pid)
+      const mine = (st.replied || {})[tid]
+      if (!mine) return json({ ok: false, error: '这一帖咱还没回过，楼中楼只能回自己评论下面的' })
+      const thread = await tieba.readThread(tid)
+      const place = findMyFloor({ floors: thread.floors, subReplies: thread.subReplies || [], myContent: mine.content, pid })
+      if (!place.ok) return json({ ok: false, error: place.error })
       if (st.seen[`sub:${pid}`]) return json({ ok: false, error: '这条楼中楼今天已经回过了' })
       const list = (st.subReplies && st.subReplies[tid]) || []
       if (list.length >= cfg.subRepliesPerThread) {

@@ -474,7 +474,7 @@ window.__ModuleLoader__.load({
             h(Sw, { key: 'g', on: c.toneGate !== false, onChange: (v) => save({ toneGate: v }),
               text: '拦客服腔（首先/其次/希望对你有帮助…）' }),
             h(Sw, { key: 'sb', on: c.replySubthreads === true, onChange: (v) => save({ replySubthreads: v }),
-              text: '允许回复楼中楼（单独开关，默认关）' }),
+              text: '允许回复自己评论下的楼中楼（单独开关，默认关）' }),
             h('div', { key: 'sq', className: 'tb-row' }, [
               h('span', { key: 'a', className: 'tb-kv' }, '同一帖最多回'),
               h('input', { key: 'b', className: 'tb-num', type: 'number', ...num('subRepliesPerThread') }),

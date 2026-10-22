@@ -52,6 +52,7 @@
 ### 楼中楼（只有 `replySubthreads` 开着才做）
 
 `tieba_thread` 会带回 `subReplies`（前 10 条，含 `pid` / `un` / `text` / `floor`）。
+⚠️ **只回自己那条评论下面的楼中楼**——别人楼里的、别的评论下面的，都不回（工具会校验并拒绝）。
 要回就用 `tieba_sub_reply`，`pid` 填那条的 pid。
 
 - **只回前几条**：同一个帖子最多 `subRepliesPerThread` 条（默认 2），到了就停；
