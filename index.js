@@ -24,7 +24,6 @@ import { roundAlive } from './lib/round-state.mjs'
 import { isValley, nextValley, peakLabel, currentWindow } from './lib/peak.mjs'
 import { localStamp } from './lib/time.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
-import { findMyFloor } from './lib/subreply.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
@@ -661,7 +660,6 @@ export function apply(ctx, config = {}) {
     execute: async (args) => {
       const tid = String(args.tid)
       const r = await tieba.readThread(tid, { pn: Number(args.pn) || 1 })
-      r.subReplies = (r.subReplies || []).slice(0, 10)
       try {
         const st = freshState()
         const seenBefore = Boolean(st.seen[`t:${tid}`])
@@ -736,64 +734,6 @@ export function apply(ctx, config = {}) {
         writeState(st)
         audit({ kind: 'reply', kw: args.kw, tid: args.tid, intent, mention: who, content: body, result: r })
         try { emitEvent('tieba.reply', { kw: args.kw, tid: args.tid, intent, chars: body.length }) } catch { /* ignore */ }
-      }
-      return json(r)
-    },
-  })
-
-  tool({
-    name: 'tieba_sub_reply',
-    description: '回复某一条楼中楼（不是回主楼）。需要 confirm: true；受每轮/每天/间隔/同帖条数限制。',
-    parameters: {
-      kw: { type: 'string', required: true, description: '吧名' },
-      tid: { type: 'string', required: true, description: '帖子 id' },
-      pid: { type: 'string', required: true, description: '被回复那条楼中楼的 pid（tieba_thread 的 subReplies 里拿）' },
-      content: { type: 'string', required: true, description: '回复正文（2~100 字，别放链接）' },
-      confirm: { type: 'boolean', required: true, description: '必须显式传 true' },
-    },
-    execute: async (args) => {
-      if (args.confirm !== true) return json({ ok: false, error: '没确认：要发公开回复得传 confirm: true' })
-      const cfg = cfgOf()
-      if (!cfg.autoReply) return json({ ok: false, error: '回帖是关着的' })
-      if (!cfg.replySubthreads) return json({ ok: false, error: '楼中楼回复是关着的：设置页「回帖规则」里可以打开' })
-      if (!tieba.hasCookie()) return json({ ok: false, error: '还没贴 BDUSS' })
-
-      const st = freshState()
-      if (st.round) {
-        const used = Number(st.round.replies) || 0
-        if (used >= cfg.replyPerRound) return json({ ok: false, error: `本轮额度用完了（每轮 ${cfg.replyPerRound} 条）` })
-      }
-      if (st.replies >= cfg.replyPerDay) return json({ ok: false, error: `今天的额度用完了（${cfg.replyPerDay} 条）` })
-      const gap = Date.now() - st.lastReplyAt
-      if (gap < cfg.replyGapSec * 1000) return json({ ok: false, error: `太快了，再等 ${Math.ceil((cfg.replyGapSec * 1000 - gap) / 1000)} 秒` })
-
-      const tid = String(args.tid), pid = String(args.pid)
-      const mine = (st.replied || {})[tid]
-      if (!mine) return json({ ok: false, error: '这一帖咱还没回过，楼中楼只能回自己评论下面的' })
-      const thread = await tieba.readThread(tid)
-      const place = findMyFloor({ floors: thread.floors, subReplies: thread.subReplies || [], myContent: mine.content, pid })
-      if (!place.ok) return json({ ok: false, error: place.error })
-      if (st.seen[`sub:${pid}`]) return json({ ok: false, error: '这条楼中楼今天已经回过了' })
-      const list = (st.subReplies && st.subReplies[tid]) || []
-      if (list.length >= cfg.subRepliesPerThread) {
-        return json({ ok: false, error: `这个帖子已经回过 ${list.length} 条楼中楼了（上限 ${cfg.subRepliesPerThread}）—— 只回前几条，别刷` })
-      }
-      if (cfg.toneGate) {
-        const hit = toneCheck(args.content)
-        if (hit.length) return json({ ok: false, error: `这句太像客服了（命中：${hit.join('、')}）` })
-      }
-
-      const r = await tieba.replySub({ kw: String(args.kw), tid, pid, content: String(args.content) })
-      if (r.ok) {
-        st.replies += 1
-        st.lastReplyAt = Date.now()
-        if (st.round) st.round.replies = (Number(st.round.replies) || 0) + 1
-        st.seen[`sub:${pid}`] = Date.now()
-        st.subReplies = st.subReplies || {}
-        st.subReplies[tid] = [...list, pid]
-        writeState(st)
-        audit({ kind: 'sub_reply', kw: args.kw, tid, pid, content: String(args.content), result: r })
-        try { emitEvent('tieba.sub_reply', { kw: args.kw, tid, pid, chars: String(args.content).length }) } catch { /* ignore */ }
       }
       return json(r)
     },

@@ -65,8 +65,6 @@ BDUSS 获取方式：电脑浏览器登录贴吧 → `F12` → Application → C
 | `autoReply` | 关 | 允许回帖 |
 | `replyPerRound` / `replyPerDay` | 1 / 3 | 每轮 / 全天回帖上限 |
 | `replyGapSec` | 30 | 两条回复的最小间隔 |
-| `replySubthreads` | 关 | 允许回复**自己评论下**的楼中楼（单独开关） |
-| `subRepliesPerThread` | 2 | 同一帖最多回几条楼中楼（0 = 不回） |
 | `answerQuestions` | 开 | 允许在回帖中解答疑问 |
 | `toneGate` | 开 | 拦截客服腔（首先 / 其次 / 希望对你有帮助 等） |
 | `mention` | 空 | 回帖时 @ 的昵称 |
@@ -102,7 +100,6 @@ BDUSS 获取方式：电脑浏览器登录贴吧 → `F12` → Application → C
 | `tieba_thread` | 读取楼层正文与图片链接 |
 | `tieba_sign` | 签到（未关注会先关注） |
 | `tieba_reply` | 回帖（需 `confirm: true`，受上述限制） |
-| `tieba_sub_reply` | 回复楼中楼（需 pid + `confirm: true`，单独开关） |
 | `tieba_follow` | 关注一个吧 |
 | `tieba_followed` | 列出账号关注的所有吧 |
 | `tieba_settings` | 读取当前配置 |
