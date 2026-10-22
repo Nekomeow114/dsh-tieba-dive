@@ -121,6 +121,21 @@ dsh --profile headless "<prompts/duty.md>"
 - headless 子进程内不会再次启动调度器，避免递归触发；
 - 20 分钟超时，输出写入 `$DSH_HOME/tieba-duty/logs/run-YYYY-MM-DD.log`。
 
+## 跨插件（文件契约）
+
+插件之间**不 import 对方代码**，只共享 `$DSH_HOME/shared/`：
+
+```
+shared/
+├─ plugins/<name>.json   能力报到：provides / consumes / version
+└─ events/<date>.jsonl   事件流：tieba.round.start / end、tieba.reply
+```
+
+- 启动时写自己的清单（`provides: tieba.read / tieba.reply / tieba.digest / tieba.events`）；
+- 每轮开始/结束、每成功回一帖，追加一行事件；
+- 装了 `dsh-memory` 时，`consumes` 会带上 `memory`，`/api/tieba-duty/integrations` 能查到；
+- 对方没装 → 文件不存在，跳过，不报错。
+
 ## 数据目录
 
 ```

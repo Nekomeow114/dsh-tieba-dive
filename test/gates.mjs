@@ -81,3 +81,12 @@ ok(st2.date === localToday(), '状态：日期跟今天一致（本地时区）'
 console.log(bad ? `\n${bad} 项失败` : '\n全部通过')
 fs.rmSync(tmp, { recursive: true, force: true })
 process.exit(bad ? 1 : 0)
+
+// 12. 跨插件契约：manifest + events
+const integ = await import('../lib/integrations.mjs')
+const m = integ.writeManifest({ name: 'test-plugin', version: '1.2.3', provides: ['memory'], consumes: [] })
+ok(m.name === 'test-plugin' && m.provides.includes('memory'), 'manifest：写入并带 provides')
+ok(integ.hasCapability('memory') === true, 'manifest：hasCapability 能查到')
+ok(integ.readManifests().some((x) => x.name === 'test-plugin'), 'manifest：readManifests 能列出')
+const ev = integ.emitEvent('test.event', { a: 1 })
+ok(ev.line.includes('"type":"test.event"') && ev.file.endsWith('.jsonl'), 'events：一行一条 JSONL')

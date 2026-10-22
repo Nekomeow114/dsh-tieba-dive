@@ -23,10 +23,15 @@ import { runRound, readLog, logFile, stopRound, startHeartbeat, heartbeatFresh, 
 import { roundAlive } from './lib/round-state.mjs'
 import { isValley, nextValley, peakLabel, currentWindow } from './lib/peak.mjs'
 import { localStamp } from './lib/time.mjs'
+import { writeManifest, readManifests, emitEvent } from './lib/integrations.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import { execFileSync } from 'node:child_process'
+
+function hasCapabilitySafe(cap) {
+  try { return readManifests().some((m) => (m.provides || []).includes(cap)) } catch { return false }
+}
 
 let VERSION = '0.0.0'
 try { VERSION = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version } catch { /* ignore */ }
@@ -125,6 +130,17 @@ export function apply(ctx, config = {}) {
   //    子子孙孙一直起（真机上真的发生了，日志里每 1~3 分钟一轮）。
   const NO_SCHEDULE = process.env.TIEBA_DUTY_NO_SCHEDULE === '1'
 
+  // 跨插件报到：写一份能力清单（别人扫 shared/plugins 就知道能搭什么）
+  try {
+    writeManifest({
+      name: 'dsh-tieba-scroll',
+      version: VERSION,
+      provides: ['tieba.read', 'tieba.reply', 'tieba.digest', 'tieba.events'],
+      consumes: hasCapabilitySafe('memory') ? ['memory'] : [],
+      note: '贴吧读帖 / 日报 / 签到 / 可选回帖',
+    })
+  } catch { /* 共享目录写不了不影响主流程 */ }
+
   // 尽早解析一次 curl 的绝对路径（进程 PATH 可能不含 /usr/bin）
   try { checkCurl(true) } catch { /* 后面还有兜底 */ }
 
@@ -141,6 +157,7 @@ export function apply(ctx, config = {}) {
     st.round = { id: Date.now(), startedAt: Date.now(), replies: 0, trigger }
     writeState(st)
     log(`开始一轮（${trigger === 'auto' ? '自动' : '手动'}）`)
+    try { emitEvent('tieba.round.start', { trigger, roundId: st.round.id }) } catch { /* 事件写不了不影响 */ }
     return st.round
   }
   /** 结束一轮 */
@@ -148,6 +165,7 @@ export function apply(ctx, config = {}) {
     const st = freshState()
     if (!st.round) return
     if (onlyId && st.round.id !== onlyId) return
+    try { emitEvent('tieba.round.end', { roundId: st.round.id, replies: st.round.replies || 0 }) } catch { /* ignore */ }
     st.round = null
     writeState(st)
   }
@@ -273,6 +291,9 @@ export function apply(ctx, config = {}) {
           if (sub === '/cooldown/clear' && req.method === 'POST') {
             tieba.clearCooldown()
             return sendJson(res, 200, { ok: true })
+          }
+          if (sub === '/integrations' && req.method === 'GET') {
+            return sendJson(res, 200, { ok: true, plugins: readManifests(), caps: { memory: hasCapabilitySafe('memory') } })
           }
           if (sub === '/health') {
             const cfg = cfgOf()
@@ -703,6 +724,7 @@ export function apply(ctx, config = {}) {
         st.replied[String(args.tid)] = { kw: String(args.kw), at: Date.now(), content: body.slice(0, 200) }
         writeState(st)
         audit({ kind: 'reply', kw: args.kw, tid: args.tid, intent, mention: who, content: body, result: r })
+        try { emitEvent('tieba.reply', { kw: args.kw, tid: args.tid, intent, chars: body.length }) } catch { /* ignore */ }
       }
       return json(r)
     },
