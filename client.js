@@ -473,6 +473,13 @@ window.__ModuleLoader__.load({
               text: '允许解答别人的疑问（关掉就只接话/共鸣/玩梗）' }),
             h(Sw, { key: 'g', on: c.toneGate !== false, onChange: (v) => save({ toneGate: v }),
               text: '拦客服腔（首先/其次/希望对你有帮助…）' }),
+            h(Sw, { key: 'sb', on: c.replySubthreads === true, onChange: (v) => save({ replySubthreads: v }),
+              text: '允许回复楼中楼（单独开关，默认关）' }),
+            h('div', { key: 'sq', className: 'tb-row' }, [
+              h('span', { key: 'a', className: 'tb-kv' }, '同一帖最多回'),
+              h('input', { key: 'b', className: 'tb-num', type: 'number', ...num('subRepliesPerThread') }),
+              h('span', { key: 'c', className: 'tb-kv' }, '条楼中楼（只回前几条，0 = 不回）'),
+            ]),
             h('div', { key: 'm', className: 'tb-row' }, [
               h('span', { key: 'a', className: 'tb-kv' }, '回复时 @'),
               h('input', { key: 'b', className: 'tb-in', style: { width: 150 }, placeholder: '昵称（留空不 @）',
