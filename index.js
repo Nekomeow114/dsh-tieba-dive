@@ -23,6 +23,7 @@ import { runRound, readLog, logFile, stopRound, startHeartbeat, heartbeatFresh, 
 import { roundAlive } from './lib/round-state.mjs'
 import { isValley, nextValley, peakLabel, currentWindow } from './lib/peak.mjs'
 import { localStamp } from './lib/time.mjs'
+import { checkOutbound } from './lib/guard.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -273,11 +274,23 @@ export function apply(ctx, config = {}) {
   //   · 又不能把 webServer 写进静态 inject：headless 没这个服务，整个插件会 pending。
   // ctx.inject 是「等服务就绪再执行」，两边都不挡。
   const mountRoutes = (webServer) => {
+    /** 只接受同源请求：本机恶意页面带别的 Origin 一律 403；curl / 同源 fetch 没有或同源放行 */
+    const sameOrigin = (req) => {
+      const origin = req.headers && req.headers.origin
+      if (!origin) return true
+      try {
+        const host = String((req.headers && req.headers.host) || '')
+        return new URL(origin).host === host
+      } catch { return false }
+    }
     try {
       ctx.effect(() => webServer.register({
       kind: 'prefix',
       path: '/api/tieba-duty',
       handler: async (req, res) => {
+        if (!sameOrigin(req)) {
+          return sendJson(res, 403, { ok: false, error: '跨站请求被拒（只接受同源）' })
+        }
         const sub = new URL(req.url, 'http://127.0.0.1').pathname.replace('/api/tieba-duty', '') || '/'
         try {
           if (sub === '/run/stop' && req.method === 'POST') {
@@ -714,6 +727,10 @@ export function apply(ctx, config = {}) {
         if (hit.length) {
           return json({ ok: false, error: `这句太像客服了（命中：${hit.join('、')}）—— 改成人话再发，长一点短一点都行` })
         }
+      }
+      const guard = checkOutbound(args.content)
+      if (!guard.ok) {
+        return json({ ok: false, error: `这句里有不该发的东西（${guard.hits.join('、')}）—— 改成不带路径和链接的说法` })
       }
       const intent = String(args.intent || 'chat')
       if (intent === 'answer' && !cfg.answerQuestions) {

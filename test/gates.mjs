@@ -82,6 +82,15 @@ console.log(bad ? `\n${bad} 项失败` : '\n全部通过')
 fs.rmSync(tmp, { recursive: true, force: true })
 process.exit(bad ? 1 : 0)
 
+// 11.8 出站内容过滤
+const { checkOutbound } = await import('../lib/guard.mjs')
+ok(checkOutbound('这书我也在看，节奏慢但挺上头').ok, '出站：正常文本放行')
+ok(checkOutbound('看 @某人 说的').ok, '出站：@ 放行')
+ok(!checkOutbound('在 /root/.dsh 里').ok, '出站：本机路径拦截')
+ok(!checkOutbound('看 https://example.com').ok, '出站：链接拦截')
+ok(!checkOutbound('C:\\Users\\x').ok, '出站：Windows 路径拦截')
+ok(!checkOutbound('BDUSS=abc').ok, '出站：凭证字样拦截')
+
 // 12. 跨插件契约：manifest + events
 const integ = await import('../lib/integrations.mjs')
 const m = integ.writeManifest({ name: 'test-plugin', version: '1.2.3', provides: ['memory'], consumes: [] })
