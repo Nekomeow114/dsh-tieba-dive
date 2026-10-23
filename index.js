@@ -967,7 +967,15 @@ export function apply(ctx, config = {}) {
         r.hotFloors = hot.slice(0, 6).map((p) => ({ floor: p.floor, likes: p.likes, replies: p.replies, text: p.text }))
         r.likesKnown = true
         if (cfgOf().evolvePersona && r.kw) {
-          try { r.styleLib = ingestStyle(r.kw, hot) } catch { /* 入库失败不影响读帖 */ }
+          try {
+            r.styleLib = ingestStyle(r.kw, hot)
+            if (r.styleLib && r.styleLib.ok && r.styleLib.added > 0) {
+              appendTimeline({
+                type: 'style', kw: r.kw, added: r.styleLib.added, total: r.styleLib.total,
+                avgLen: r.styleLib.stats && r.styleLib.stats.avgLen,
+              })
+            }
+          } catch { /* 入库失败不影响读帖 */ }
         }
       } catch (e) {
         r.likesKnown = false

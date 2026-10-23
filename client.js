@@ -1789,12 +1789,13 @@ window.__ModuleLoader__.load({
             timeline.length
               ? h('div', { key: 'tll', className: 'tb-timeline' }, timeline.slice(0, 8).map((e, i) =>
                 h('div', { key: i, className: 'tb-tl-item' },
-                  (e.type === 'soak' ? '🌱 浸泡 · ' : '✦ 学习 · ') + (e.at || '') + (e.kw ? ' · ' + e.kw : '')
+                  (e.type === 'style' ? '📚 入库 ' + e.added + ' 条 · ' : (e.type === 'soak' ? '🌱 学习 · ' : '✦ 学习 · ')) + (e.at || '') + (e.kw ? ' · ' + e.kw : '')
                   + (e.fromVersion ? (' · v' + e.fromVersion + ' → v' + e.toVersion) : '')
                   + (e.trait ? (' · ' + e.trait.key + ' ' + e.trait.from + '→' + e.trait.to) : '')
                   + ((e.samples && e.samples.length) ? (' · 学了「' + e.samples[0] + '」') : '')
+                  + ((e.type === 'style' && e.avgLen) ? (' · 均 ' + e.avgLen + ' 字 · 共 ' + e.total + ' 条') : '')
                   + (e.type === 'soak' ? (' · 第 ' + e.visits + ' 次') : ''))))
-              : h('div', { key: 'tl0', className: 'tb-kv' }, '还没有学习或浸泡记录。'),
+              : h('div', { key: 'tl0', className: 'tb-kv' }, '还没有记录。跑一轮、读到高赞回复就会出现在这里。'),
 
             h('div', { key: 'div', className: 'tb-divider' }),
 
