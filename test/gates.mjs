@@ -146,6 +146,7 @@ ok(evo2.readEvolutionState().paused === false, '保险：恢复生效')
 {
   const st = await import('../lib/style.mjs')
   ok(st.deriveMode(['串子', '抽象']) === '串子', '环境：串子标签 → 串子模式')
+ok(st.deriveMode(['无厘头']) === '无厘头', '环境：无厘头标签 → 无厘头模式')
   const ob = st.observeBar({ kw: '抗压背锅吧', samples: ['你说是那就是吧', '乐'], tags: ['串子'], mode: '串子' })
   ok(ob.ok && ob.style.mode === '串子', '环境：泡一次记住模式')
   const eff = st.effectiveTraits({ abstract: 3, sharp: 2, gentle: 7, talkative: 4, imageBias: 2 }, ob.style)
