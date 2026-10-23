@@ -92,6 +92,14 @@ ok(evo.mergeSamples(new Array(40).fill('x').map((_, i) => 's' + i), ['new']).len
 const withNote = evo.appendEvolutionNote('正文', ['哈？这也行'])
 ok(withNote.includes('正文') && withNote.includes('演化记录') && withNote.includes('哈？这也行'), '演化：只追加不覆盖正文')
 
+// 11.7 同源判断
+const { isSameOrigin } = await import('../lib/origin.mjs')
+ok(isSameOrigin('http://127.0.0.1:3080', '127.0.0.1:3080'), '同源：完全一致')
+ok(isSameOrigin('http://localhost:3080', '127.0.0.1:3080'), '同源：回环地址互通')
+ok(isSameOrigin('', '127.0.0.1:3080'), '同源：没有 Origin（curl）放行')
+ok(!isSameOrigin('http://evil.com', '127.0.0.1:3080'), '同源：外部域名拒绝')
+ok(!isSameOrigin('http://127.0.0.1:3080', 'example.com'), '同源：主机名不同拒绝')
+
 // 11.8 出站内容过滤
 const { checkOutbound } = await import('../lib/guard.mjs')
 ok(checkOutbound('这书我也在看，节奏慢但挺上头').ok, '出站：正常文本放行')

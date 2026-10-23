@@ -24,6 +24,7 @@ import { roundAlive } from './lib/round-state.mjs'
 import { isValley, nextValley, peakLabel, currentWindow } from './lib/peak.mjs'
 import { localStamp } from './lib/time.mjs'
 import { checkOutbound } from './lib/guard.mjs'
+import { isSameOrigin } from './lib/origin.mjs'
 import { readProposals, addProposal, getProposal, setStatus, mergeSamples, appendEvolutionNote } from './lib/evolve.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
 import fs from 'node:fs'
@@ -276,14 +277,7 @@ export function apply(ctx, config = {}) {
   // ctx.inject 是「等服务就绪再执行」，两边都不挡。
   const mountRoutes = (webServer) => {
     /** 只接受同源请求：本机恶意页面带别的 Origin 一律 403；curl / 同源 fetch 没有或同源放行 */
-    const sameOrigin = (req) => {
-      const origin = req.headers && req.headers.origin
-      if (!origin) return true
-      try {
-        const host = String((req.headers && req.headers.host) || '')
-        return new URL(origin).host === host
-      } catch { return false }
-    }
+    const sameOrigin = (req) => isSameOrigin(req.headers && req.headers.origin, req.headers && req.headers.host)
     try {
       ctx.effect(() => webServer.register({
       kind: 'prefix',

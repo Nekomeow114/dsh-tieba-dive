@@ -145,11 +145,16 @@ window.__ModuleLoader__.load({
       }, [])
 
       const save = async (patch) => {
+        const before = cfg
         setBusy(true); setMsg(null)
+        setCfg((cur) => ({ ...(cur || {}), ...patch }))   // 先让开关动起来
         try {
           const r = await jpost('/config', patch)
           setCfg(r.cfg); setMsg({ ok: true, text: '已保存' }); await refresh()
-        } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+        } catch (e) {
+          setCfg(before)                                   // 失败回滚
+          setMsg({ ok: false, text: '没保存上：' + String(e.message || e) })
+        } finally { setBusy(false) }
       }
       const num = (key) => ({
         value: cfg ? cfg[key] : '',
