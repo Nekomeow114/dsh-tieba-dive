@@ -936,7 +936,6 @@ window.__ModuleLoader__.load({
             jget('/timeline?n=12').catch(() => null),
           ])
           if (ev) setEvoState(ev)
-          if (st) setStyleState(st)
           if (tl && Array.isArray(tl.entries)) setTimeline(tl.entries)
         } catch { /* ignore */ }
       }, [])
