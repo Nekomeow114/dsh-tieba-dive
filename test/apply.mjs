@@ -31,6 +31,15 @@ function makeCtx(withWeb) {
   return { ctx, calls }
 }
 
+// 静态检查：设置页七张卡都在（客户端改动是字符串拼接，最容易"改了但没插进去"）
+{
+  const fs2 = await import('node:fs')
+  const src = fs2.readFileSync(new URL('../client.js', import.meta.url), 'utf8')
+  const cards = ['① 账号', '② 每一轮', '③ 人设', '④ 自动化', '⑤ 回帖规则', '⑥ 日记', '⑦ 人设演化']
+  const missing = cards.filter((c) => !src.includes(c))
+  ok(missing.length === 0, '设置页七张卡都在', missing.join(','))
+}
+
 // 场景 A：headless（没有 webServer）
 const a = makeCtx(false)
 let errA = ''
