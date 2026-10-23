@@ -142,6 +142,12 @@ ok(evo2.readEvolutionState().paused === false, '保险：恢复生效')
   evo2.resumeEvolution()
 }
 
+// 11.61 图床上传响应解析
+const { parseUploadResponse } = await import('../lib/tieba.js')
+const upOk = parseUploadResponse("window.imageUploadResult=1;var result={imageSrc:'http:\\/\\/m.tiebaimg.com\\/x.jpg',imageInfo:'abc123,1,1,false'};")
+ok(upOk.ok && upOk.imageInfo === 'abc123,1,1,false' && upOk.imageSrc.includes('m.tiebaimg.com'), '图床：解析成功响应')
+ok(!parseUploadResponse('{"errorMsg":"图片上传失败，请重新上传"}').ok, '图床：失败响应识别')
+
 // 11.62 图片库
 const img = await import('../lib/images.mjs')
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
