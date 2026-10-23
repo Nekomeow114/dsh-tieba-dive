@@ -147,6 +147,7 @@ const img = await import('../lib/images.mjs')
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 const a1 = img.addImage({ name: 't.png', dataUrl: PNG, desc: '测试图', tags: ['贴贴'] })
 ok(a1.ok && a1.image.id, '图片：上传成功', a1.error || '')
+ok(img.biasHint(1).includes('基本不发') && img.biasHint(9).includes('倾向发图'), '图片：发图倾向分档文案')
 ok(!('file' in a1.image) && !('abs' in a1.image), '图片：给模型的视图不含路径')
 const iid = a1.image.id
 const stImg = { imagesToday: { count: 0, byId: {} }, round: null }
