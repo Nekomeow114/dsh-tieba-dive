@@ -26,8 +26,9 @@ import { localStamp } from './lib/time.mjs'
 import { checkOutbound } from './lib/guard.mjs'
 import { isSameOrigin } from './lib/origin.mjs'
 import { readProposals, addProposal, getProposal, setStatus, mergeSamples, appendEvolutionNote } from './lib/evolve.mjs'
-import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS } from './lib/persona.mjs'
+import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS, getVersion } from './lib/persona.mjs'
 import { applyEvolution, canEvolveToday, readEvolutionState, driftReport, pauseEvolution, resumeEvolution } from './lib/evolution.mjs'
+import { toText, toJson } from './lib/persona-export.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -332,6 +333,16 @@ export function apply(ctx, config = {}) {
           }
           if (sub === '/persona/versions' && req.method === 'GET') {
             return sendJson(res, 200, { ok: true, versions: listVersions(), current: ensurePersona(cfgOf().styleSamples).version })
+          }
+          if (sub === '/persona/export' && req.method === 'GET') {
+            const u = new URL(req.url, 'http://127.0.0.1')
+            const v = u.searchParams.get('version')
+            const p = v ? getVersion(Number(v)) : ensurePersona(cfgOf().styleSamples)
+            if (!p) return sendJson(res, 404, { ok: false, error: '没有这个版本' })
+            if (u.searchParams.get('format') === 'json') {
+              return sendJson(res, 200, { ok: true, filename: `persona-v${p.version}.json`, content: JSON.stringify(toJson(p), null, 2) })
+            }
+            return sendJson(res, 200, { ok: true, filename: `persona-v${p.version}.txt`, content: toText(p, { core: CORE }) })
           }
           if (sub === '/persona/rollback' && req.method === 'POST') {
             const body = JSON.parse((await readBody(req)) || '{}')
@@ -706,6 +717,22 @@ export function apply(ctx, config = {}) {
       const st = readEvolutionState()
       const p = ensurePersona(cfg.styleSamples)
       return json({ ok: true, enabled: !!cfg.evolvePersona, canEvolveToday: canEvolveToday(), lastDate: st.lastDate || '', count: st.count || 0, version: p.version, traits: p.traits })
+    },
+  })
+
+  tool({
+    name: 'tieba_persona_export',
+    description: '导出人设：format=text（可粘贴进人设框）或 json（备份）。version 省略则导当前版本。',
+    parameters: {
+      format: { type: 'string', description: 'text / json（默认 text）' },
+      version: { type: 'number', description: '历史版本号（可省）' },
+    },
+    execute: async (args) => {
+      const p = args.version ? getVersion(Number(args.version)) : ensurePersona(cfgOf().styleSamples)
+      if (!p) return json({ ok: false, error: '没有这个版本' })
+      const fmt = String(args.format || 'text')
+      if (fmt === 'json') return json({ ok: true, format: 'json', version: p.version, data: toJson(p) })
+      return json({ ok: true, format: 'text', version: p.version, text: toText(p, { core: CORE }) })
     },
   })
 

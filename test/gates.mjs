@@ -142,6 +142,16 @@ ok(evo2.readEvolutionState().paused === false, '保险：恢复生效')
   evo2.resumeEvolution()
 }
 
+// 11.63 人设导出
+const ex = await import('../lib/persona-export.mjs')
+const samplePersona = { version: 7, traits: { abstract: 3, sharp: 2, gentle: 8, talkative: 4, imageBias: 2 }, voice: { samples: ['正常一句', '看 https://example.com'], quirks: [], sentenceLen: 'short', punctuation: 'light' } }
+const txt = ex.toText(samplePersona, { core: per.CORE })
+ok(txt.includes('v7') && txt.includes('核心层') && txt.includes('温柔度：8'), '导出：文本含版本/核心层/旋钮')
+ok(!txt.includes('https://'), '导出：文本剔除链接')
+const js = ex.toJson(samplePersona)
+ok(js.format === 'dsh-tieba-persona' && js.schema === 1 && js.version === 7, '导出：JSON 带 format/schema/版本')
+ok(js.voice.samples.length === 1, '导出：JSON 也脱敏')
+
 // 11.65 配置字段往返（防「加了字段但 normalize 丢了」）
 {
   const { DEFAULTS, normalize } = await import('../lib/config.mjs')

@@ -151,6 +151,26 @@ window.__ModuleLoader__.load({
         try { const r = await jget('/persona/state'); setPersona(r.persona) } catch { /* ignore */ }
       }, [])
       React.useEffect(() => { loadPersona() }, [loadPersona])
+      const loadVersions = React.useCallback(async () => {
+        try { const r = await jget('/persona/versions'); setVersions(r.versions || []) } catch { /* ignore */ }
+      }, [])
+      React.useEffect(() => { loadVersions() }, [loadVersions])
+      const download = (name, content, type) => {
+        const blob = new Blob([content], { type: type || 'text/plain;charset=utf-8' })
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob); a.download = name
+        document.body.appendChild(a); a.click(); a.remove()
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+      }
+      const exportPersona = async (format, version) => {
+        setBusy(true)
+        try {
+          const q = '/persona/export?format=' + format + (version ? '&version=' + version : '')
+          const r = await jget(q)
+          download(r.filename || ('persona.' + format), r.content, format === 'json' ? 'application/json' : 'text/plain;charset=utf-8')
+          setMsg({ ok: true, text: '已导出 ' + (r.filename || '') })
+        } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+      }
 
       React.useEffect(() => {
         let alive = true
@@ -625,12 +645,35 @@ window.__ModuleLoader__.load({
         ]),
         health ? h('pre', { key: 'hp', className: 'tb-pre' }, JSON.stringify(health, null, 1)) : null,
 
-        // ── D3 版本与导出（待实现）──
+        // ── D3 版本与导出 ──
         h('div', { key: 'versions', className: 'tb-card' }, [
           h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, 'D3 版本与导出'),
-          h('div', { key: 'k', className: 'tb-kv' }, '还没实现。下一步会做成：版本历史、一键回滚、导出纯文本 / JSON。'),
+          h('div', { key: 'cur', className: 'tb-kv' },
+            persona ? ('当前 v' + persona.version + ' · 共 ' + versions.length + ' 个快照') : ''),
+          h('div', { key: 'e', className: 'tb-row' }, [
+            h('button', { key: 't', className: 'tb-btn ghost sm', disabled: busy, onClick: () => exportPersona('text') }, '导出当前（文本）'),
+            h('button', { key: 'j', className: 'tb-btn ghost sm', disabled: busy, onClick: () => exportPersona('json') }, '导出当前（JSON）'),
+          ]),
+          versions.length
+            ? h('div', { key: 'list' }, versions.slice().reverse().slice(0, 10).map((v) =>
+              h('div', { key: v.version, style: { borderTop: '1px solid #eef2f8', marginTop: 8, paddingTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } }, [
+                h('span', { key: 'a', className: 'tb-kv', style: { flex: 1 } },
+                  'v' + v.version + ' · ' + (v.at || '') + (v.reason ? ' · ' + v.reason : '')),
+                h('button', { key: 'x', className: 'tb-btn ghost sm', disabled: busy, onClick: () => exportPersona('text', v.version) }, '导出'),
+                h('button', { key: 'r', className: 'tb-btn ghost sm', disabled: busy,
+                  onClick: async () => {
+                    if (!window.confirm('回滚到 v' + v.version + '？会作为一个新版本写回，历史不丢。')) return
+                    setBusy(true)
+                    try {
+                      const r = await jpost('/persona/rollback', { version: v.version })
+                      if (!r.ok) throw new Error(r.error || '回滚失败')
+                      await loadPersona(); await loadVersions(); await loadEvo()
+                      setMsg({ ok: true, text: '已回滚到 v' + v.version + '（新版本 v' + r.persona.version + '）' })
+                    } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+                  } }, '回滚'),
+              ])))
+            : h('div', { key: 'none', className: 'tb-kv' }, '还没有快照。改一次人设就会出现。'),
         ]),
-
         ]),
 
         msg ? h('div', { key: 'm', className: 'tb-msg ' + (msg.ok ? 'ok' : 'err') }, msg.text) : null,
