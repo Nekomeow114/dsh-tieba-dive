@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.19.1 (wip) — 2026-10-23
+
+- 修复 `voiceProfile is not defined`：persona 导入行漏了 voiceProfile。
+- 接口冒烟：`/persona/state` 返回 profile 正常。
+
 ## 1.19.0 (wip) — 2026-10-23
 
 - **人设与表达重写**：B1 去掉五个滑条，改成「声音画像」——句长、标点、语气词、句式、语料样本。
