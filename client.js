@@ -129,6 +129,9 @@ window.__ModuleLoader__.load({
       const [health, setHealth] = React.useState(null)
       const [proposals, setProposals] = React.useState([])
       const [persona, setPersona] = React.useState(null)
+      const [evoState, setEvoState] = React.useState(null)
+      const [versions, setVersions] = React.useState([])
+      const [images, setImages] = React.useState([])
 
       const refresh = React.useCallback(async () => {
         try {

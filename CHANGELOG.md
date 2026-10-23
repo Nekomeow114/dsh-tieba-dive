@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.15.1 — 2026-10-23
+
+- 修复面板 `images is not defined`：`images` / `versions` / `evoState` 三个 state 声明漏插。
+- 新增静态检查：每个 `setXxx` 必须存在对应 `const [xxx, setXxx]` 声明，防止同类事故。
+
 ## 1.15.0 — 2026-10-23
 
 - **图片描述补全**：新工具 `tieba_image_pending` 返回待补描述的图（含内部路径）；

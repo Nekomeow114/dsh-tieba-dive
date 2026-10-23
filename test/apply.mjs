@@ -53,6 +53,13 @@ function makeCtx(withWeb) {
   const used = new Set()
   for (const m of src.matchAll(/save\(\{\s*([A-Za-z]+)\s*:/g)) used.add(m[1])
   for (const m of src.matchAll(/num\('([A-Za-z]+)'\)/g)) used.add(m[1])
+  // 每个 setXxx 都必须在组件里声明过 const [xxx, setXxx]
+  const setters = new Set([...src.matchAll(/set([A-Z][A-Za-z0-9]*)\(/g)].map((m) => m[1]))
+  const GLOBALS = new Set(['Timeout', 'Interval', 'Attribute', 'Item', 'RequestHeader', 'Date', 'Title', 'Property'])
+  const undeclared = [...setters]
+    .filter((n) => !GLOBALS.has(n))
+    .filter((n) => !new RegExp('set' + n + '\\s*\\]').test(src))
+  ok(undeclared.length === 0, '所有 setXxx 都有对应 state 声明', undeclared.join(','))
   const unknown = [...used].filter((k) => !(k in DEFAULTS))
   ok(unknown.length === 0, '设置页引用的配置键都在 DEFAULTS 里', unknown.join(','))
 }
