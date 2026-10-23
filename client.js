@@ -1728,7 +1728,7 @@ window.__ModuleLoader__.load({
         // ====================================================================
         // Group D
         // ====================================================================
-        h(Group, { key: 'D', id: 'D', title: '成长与记录',
+        h(Group, { key: 'D', id: 'D', title: '学习与日记',
           summary: (c.evolvePersona ? '学习开' : '学习关') + ((c.diaryEnabled === false) ? ' · 日记关' : ' · 日记开') }, [
 
           h('div', { key: 'evolve', className: 'tb-card' }, [
@@ -1738,7 +1738,9 @@ window.__ModuleLoader__.load({
             ]),
 
             h(Sw, { key: 'e', on: c.evolvePersona === true, onChange: (v) => save({ evolvePersona: v }),
-              text: '允许从吧里提炼语气样本与语料浸泡（提议需采纳，长期浸泡受漂移阈值保护）' }),
+              text: '允许从吧里学习语气与语料浸泡（长期浸泡受漂移阈值保护）' }),
+            h(Sw, { key: 'hot', on: c.learnHotOnly !== false, onChange: (v) => save({ learnHotOnly: v }),
+              text: '只从高互动楼层学（赞数接口读不到，用楼中楼数代替）' }),
 
             // 学习状态与漂移保险条
             evoState ? h('div', { key: 'evobar', className: 'tb-subcard' }, [

@@ -33,6 +33,7 @@ ok(c.autoReply === false && c.diaryEnabled === true && c.toneGate === true, '默
 ok(c.answerQuestions === true && c.dedupeDays === 7, '默认答疑开、去重 7 天')
 ok(normalize({ bars: 'a\nb, c' }).bars.join('|') === 'a|b|c', '吧名支持换行/逗号分隔')
 ok(normalize({ replyPerDay: 999 }).replyPerDay === 30, '每日上限被夹到 30')
+ok(normalize({}).learnHotOnly === true, '默认只从高互动楼层学')
 ok(normalize({ readPerRound: 0 }).readPerRound === 1, '每轮读至少 1')
 ok(normalize({ diaiyEnabled: false }).diaryEnabled === true, '拼错的键不会误关功能')
 
