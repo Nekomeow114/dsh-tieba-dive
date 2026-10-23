@@ -1165,7 +1165,6 @@ window.__ModuleLoader__.load({
       const replyLimit = c.replyPerDay ?? 5
       const quotaFull = !!(status && c.autoReply && repliesToday >= replyLimit)
       const isVal = !!(status && status.valley && status.valley.isValley)
-      const pendingProposals = proposals.filter((p) => p.status === 'pending')
 
       return h('div', { className: 'tb' }, [
         // ── 顶部即时浮动消息 ──
@@ -1187,7 +1186,7 @@ window.__ModuleLoader__.load({
                   running ? h('span', { key: 'r', className: 'tb-chip run' },
                     live && live.collecting ? '采集中…' : '模型轮运行中…') : null,
                 ]),
-                h('div', { key: 's', className: 'tb-sub' }, '每天替你看几个吧：读帖挑重点、写日报、自动签到，回帖与人设演化按需开启。'),
+                h('div', { key: 's', className: 'tb-sub' }, '每天替你看几个吧：读帖挑重点、写日报、自动签到，回帖与人设学习按需开启。'),
               ]),
             ]),
             h('div', { key: 'act', className: 'tb-hero-actions' }, [
@@ -1223,7 +1222,7 @@ window.__ModuleLoader__.load({
               h('span', { key: 'v', className: 'tb-stat-val' },
                 running ? '后台执行中' : ((status && status.lastRunDate) ? '上次：' + status.lastRunDate : '尚未自动运行')),
               h('span', { key: 'm', className: 'tb-stat-meta' },
-                persona ? `人设 v${persona.version} · ${c.evolvePersona ? '演化开' : '演化关'}` : '人设加载中…'),
+                persona ? `人设 v${persona.version} · ${c.evolvePersona ? '学习开' : '学习关'}` : '人设加载中…'),
             ]),
           ]),
 
@@ -1730,25 +1729,25 @@ window.__ModuleLoader__.load({
         // Group D
         // ====================================================================
         h(Group, { key: 'D', id: 'D', title: '成长与记录',
-          summary: (c.evolvePersona ? '演化开' : '演化关') + ((c.diaryEnabled === false) ? ' · 日记关' : ' · 日记开') }, [
+          summary: (c.evolvePersona ? '学习开' : '学习关') + ((c.diaryEnabled === false) ? ' · 日记关' : ' · 日记开') }, [
 
           h('div', { key: 'evolve', className: 'tb-card' }, [
             h('div', { key: 'hd', className: 'tb-card-hd' }, [
-              h('div', { key: 't', className: 'tb-card-title' }, '演化'),
+              h('div', { key: 't', className: 'tb-card-title' }, '学习'),
               h('span', { key: 'st', className: 'tb-tag primary' }, '吃语料 · 主人点头才改'),
             ]),
 
             h(Sw, { key: 'e', on: c.evolvePersona === true, onChange: (v) => save({ evolvePersona: v }),
               text: '允许从吧里提炼语气样本与语料浸泡（提议需采纳，长期浸泡受漂移阈值保护）' }),
 
-            // 演化状态与漂移保险条
+            // 学习状态与漂移保险条
             evoState ? h('div', { key: 'evobar', className: 'tb-subcard' }, [
               h('div', { key: 'row', className: 'tb-row', style: { margin: 0, justifyContent: 'space-between' } }, [
                 h('div', { key: 'chips', className: 'tb-chips', style: { marginTop: 0 } }, [
                   h('span', { key: 'st', className: 'tb-chip ' + (evoState.last && evoState.last.paused ? 'warn' : (evoState.canEvolveToday ? 'ok' : '')) },
                     evoState.last && evoState.last.paused
-                      ? ('⏸ 演化已暂停' + (evoState.last.pausedReason ? '：' + evoState.last.pausedReason : ''))
-                      : (evoState.canEvolveToday ? '今日可演化' : '今日已演化')),
+                      ? ('⏸ 学习已暂停' + (evoState.last.pausedReason ? '：' + evoState.last.pausedReason : ''))
+                      : (evoState.canEvolveToday ? '今日可学习' : '今日已学习')),
                   evoState.drift ? h('span', {
                     key: 'dr',
                     className: 'tb-chip ' + (evoState.drift.level === 'high' ? 'warn' : (evoState.drift.level === 'warn' ? 'warn' : 'ok')),
@@ -1762,10 +1761,10 @@ window.__ModuleLoader__.load({
                       const paused = !!(evoState.last && evoState.last.paused)
                       await jpost(paused ? '/evolution/resume' : '/evolution/pause', {})
                       await loadEvo()
-                      setMsg({ ok: true, text: paused ? '已恢复演化' : '已暂停演化（日记与回帖照常）' })
+                      setMsg({ ok: true, text: paused ? '已恢复学习' : '已暂停学习（日记与回帖照常）' })
                     } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
                   },
-                }, (evoState.last && evoState.last.paused) ? '▶ 恢复演化' : '⏸ 暂停演化'),
+                }, (evoState.last && evoState.last.paused) ? '▶ 恢复学习' : '⏸ 暂停学习'),
               ]),
             ]) : null,
 
@@ -1787,49 +1786,18 @@ window.__ModuleLoader__.load({
                     '「' + x + '」 · 来自 ' + b.kw)),
                 ])))
               : h('div', { key: 'sk0', className: 'tb-subcard', style: { marginTop: 0 } },
-                h('span', { className: 'tb-kv' }, '还没泡过任何吧。开启演化后跑一轮就会积累各吧的说话方式。')),
+                h('span', { className: 'tb-kv' }, '还没泡过任何吧。开启学习后跑一轮就会积累各吧的说话方式。')),
 
-            // 待处理演化建议
-            h('div', { key: 'prhd', className: 'tb-label' }, [
-              h('span', { key: 'a' }, '💡 待采纳的语气样本建议'),
-              h('span', { key: 'b', className: 'tb-kv' }, pendingProposals.length ? `${pendingProposals.length} 条待处理` : '无待处理'),
-            ]),
-            pendingProposals.length
-              ? h('div', { key: 'list' }, pendingProposals.map((p) =>
-                h('div', { key: p.id, className: 'tb-subcard', style: { marginTop: 6 } }, [
-                  h('div', { key: 's', style: { fontSize: 13, lineHeight: 1.75, fontWeight: 500 } },
-                    p.samples.map((x, i) => h('div', { key: i }, '· 「' + x + '」'))),
-                  p.note ? h('div', { key: 'n', className: 'tb-kv', style: { marginTop: 4 } }, p.note) : null,
-                  h('div', { key: 'r', className: 'tb-row', style: { marginBottom: 0 } }, [
-                    h('button', { key: 'a', className: 'tb-btn soft sm', disabled: busy,
-                      onClick: async () => {
-                        setBusy(true)
-                        try {
-                          await jpost('/persona/apply', { id: p.id })
-                          await loadProposals(); await loadPersona(); await loadVersions(); await refresh()
-                          setMsg({ ok: true, text: '✓ 已采纳，样本已并进人设' })
-                        } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
-                      } }, '✓ 采纳并入人设'),
-                    h('button', { key: 'd', className: 'tb-btn ghost sm', disabled: busy,
-                      onClick: async () => {
-                        setBusy(true)
-                        try { await jpost('/persona/dismiss', { id: p.id }); await loadProposals() }
-                        catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
-                      } }, '忽略'),
-                  ]),
-                ])))
-              : h('div', { key: 'none', className: 'tb-kv' }, '还没有待处理的建议。'),
-
-            h('div', { key: 'tl', className: 'tb-label' }, '演化时间轴'),
+            h('div', { key: 'tl', className: 'tb-label' }, '学习时间轴'),
             timeline.length
               ? h('div', { key: 'tll', className: 'tb-timeline' }, timeline.slice(0, 8).map((e, i) =>
                 h('div', { key: i, className: 'tb-tl-item' },
-                  (e.type === 'soak' ? '🌱 浸泡 · ' : '✦ 演化 · ') + (e.at || '') + (e.kw ? ' · ' + e.kw : '')
+                  (e.type === 'soak' ? '🌱 浸泡 · ' : '✦ 学习 · ') + (e.at || '') + (e.kw ? ' · ' + e.kw : '')
                   + (e.fromVersion ? (' · v' + e.fromVersion + ' → v' + e.toVersion) : '')
                   + (e.trait ? (' · ' + e.trait.key + ' ' + e.trait.from + '→' + e.trait.to) : '')
                   + ((e.samples && e.samples.length) ? (' · 学了「' + e.samples[0] + '」') : '')
                   + (e.type === 'soak' ? (' · 第 ' + e.visits + ' 次') : ''))))
-              : h('div', { key: 'tl0', className: 'tb-kv' }, '还没有演化或浸泡记录。'),
+              : h('div', { key: 'tl0', className: 'tb-kv' }, '还没有学习或浸泡记录。'),
 
             h('div', { key: 'div', className: 'tb-divider' }),
 
