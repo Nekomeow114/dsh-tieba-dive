@@ -268,7 +268,7 @@ export function apply(ctx, config = {}) {
   }
   const readBody = (req) => new Promise((resolve) => {
     let b = ''
-    req.on('data', (c) => { b += c; if (b.length > 1e6) req.destroy() })
+    req.on('data', (c) => { b += c; if (b.length > 6e6) req.destroy() })  // 图片 data URL 会到几 MB
     req.on('end', () => { try { resolve(JSON.parse(b || '{}')) } catch { resolve({}) } })
   })
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.15.2 — 2026-10-23
+
+- 修复图片上传 `Failed to fetch`：`readBody` 原来超过 1MB 字符就断开连接，图片 data URL 必然超。
+  上限放宽到 6MB。
+- 上传前在浏览器里压缩：最长边 1200px、JPEG 质量 0.85→0.5，目标 < 900KB（GIF 会变成静态图）。
+
 ## 1.15.1 — 2026-10-23
 
 - 修复面板 `images is not defined`：`images` / `versions` / `evoState` 三个 state 声明漏插。

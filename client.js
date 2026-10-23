@@ -162,14 +162,35 @@ window.__ModuleLoader__.load({
         try { const r = await jget('/images'); setImages(r.images || []) } catch { /* ignore */ }
       }, [])
       React.useEffect(() => { loadImages() }, [loadImages])
+      const compressImage = (file) => new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file)
+        const img = new Image()
+        img.onload = () => {
+          try {
+            const max = 1200
+            const scale = Math.min(1, max / Math.max(img.width, img.height))
+            const w = Math.max(1, Math.round(img.width * scale))
+            const h = Math.max(1, Math.round(img.height * scale))
+            const c = document.createElement('canvas')
+            c.width = w; c.height = h
+            c.getContext('2d').drawImage(img, 0, 0, w, h)
+            let q = 0.85
+            let data = c.toDataURL('image/jpeg', q)
+            while (data.length > 900_000 && q > 0.5) { q -= 0.1; data = c.toDataURL('image/jpeg', q) }
+            URL.revokeObjectURL(url)
+            resolve(data)
+          } catch (e) { URL.revokeObjectURL(url); reject(e) }
+        }
+        img.onerror = (e) => { URL.revokeObjectURL(url); reject(e) }
+        img.src = url
+      })
       const uploadImage = async (file) => {
         if (!file) return
         if (file.size > 2 * 1024 * 1024) { setMsg({ ok: false, text: '单张不能超过 2MB' }); return }
         setBusy(true)
         try {
-          const dataUrl = await new Promise((resolve, reject) => {
-            const rd = new FileReader(); rd.onload = () => resolve(String(rd.result || '')); rd.onerror = reject; rd.readAsDataURL(file)
-          })
+          const dataUrl = await compressImage(file)
+          if (dataUrl.length > 1_200_000) { setMsg({ ok: false, text: '这张图压不下来了，换一张小点的' }); return }
           const desc = window.prompt('给这张图写一句话描述（留空 = 待补）', '') || ''
           const tags = (window.prompt('适用场景标签（逗号分隔，可留空）', '') || '').split(/[，,]/).map((x) => x.trim()).filter(Boolean)
           const r = await jpost('/images', { name: file.name, dataUrl, desc, tags })
