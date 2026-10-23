@@ -41,6 +41,14 @@ window.__ModuleLoader__.load({
       .tb-chip.run { background: #e8f2ff; color: #1f5aa8; }
       .tb-chip.run::before { content: '●'; color: #2d6cdf; margin-right: 5px; animation: tb-pulse 1.2s ease-in-out infinite; }
       @keyframes tb-pulse { 50% { opacity: .3; } }
+      .tb-group { border: 1px solid #dbe7f7; border-radius: 14px; background: #fbfdff; margin-bottom: 14px; }
+      .tb-group > summary { cursor: pointer; list-style: none; padding: 12px 14px; display: flex; align-items: center; gap: 8px; }
+      .tb-group > summary::-webkit-details-marker { display: none; }
+      .tb-group > summary::before { content: '▸'; color: #8fa8cc; }
+      .tb-group[open] > summary::before { content: '▾'; }
+      .tb-group-id { font-weight: 700; color: #2d6cdf; }
+      .tb-group-title { font-weight: 700; color: #22303f; }
+      .tb-group-body { padding: 0 10px 10px; }
       .tb-card { border: 1px solid #e2eaf5; border-radius: 12px; background: #fff;
         padding: 12px 14px; margin-bottom: 12px; }
       .tb-card > summary { cursor: pointer; font-weight: 600; list-style: none; }
@@ -92,6 +100,15 @@ window.__ModuleLoader__.load({
         return this.props.children
       }
     }
+
+    const Group = ({ id, title, summary, open, children }) => h('details', { className: 'tb-group', open: !!open }, [
+      h('summary', { key: 's', className: 'tb-group-sum' }, [
+        h('span', { key: 'i', className: 'tb-group-id' }, id),
+        h('span', { key: 't', className: 'tb-group-title' }, title),
+        summary ? h('span', { key: 'm', className: 'tb-tag' }, summary) : null,
+      ]),
+      h('div', { key: 'b', className: 'tb-group-body' }, children),
+    ])
 
     const Sw = ({ on, onChange, text }) => h('label', { className: 'tb-sw' }, [
       h('input', { key: 'c', type: 'checkbox', checked: !!on, onChange: (e) => onChange(e.target.checked) }),
@@ -321,15 +338,17 @@ window.__ModuleLoader__.load({
         ((!hasCookie || !c.bars || c.bars.length === 0)) ? h('div', { key: 'onboard', className: 'tb-card', style: { borderColor: '#cfe0f7', background: '#f7fbff' } }, [
           h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, '三步就能跑起来'),
           h('div', { key: 'l', className: 'tb-kv', style: { lineHeight: 2 } }, [
-            h('div', { key: 'a' }, (hasCookie ? '✅' : '①') + ' 贴 BDUSS（在「① 账号」里，点保存并测试）'),
-            h('div', { key: 'b' }, ((c.bars && c.bars.length) ? '✅' : '②') + ' 填要刷的吧（一行一个，贴吧里的吧名）'),
-            h('div', { key: 'c' }, '③ 点「刷一轮贴吧」——先只采集，看看它读到了什么'),
+            h('div', { key: 'a' }, (hasCookie ? '✅' : '1.') + ' 贴 BDUSS（在「A1 账号」里，点保存并测试）'),
+            h('div', { key: 'b' }, ((c.bars && c.bars.length) ? '✅' : '2.') + ' 填要刷的吧（一行一个，贴吧里的吧名）'),
+            h('div', { key: 'c' }, '3. 点「刷一轮贴吧」——先只采集，看看它读到了什么'),
           ]),
         ]) : null,
 
-        // ── ① 账号 ──
+        h(Group, { key: 'A', id: 'A', title: '账号与刷帖', open: true,
+          summary: (hasCookie ? '已登录' : '未登录') + ' · ' + ((c.bars || []).length) + ' 个吧' }, [
+        // ── A1 账号 ──
         h('div', { key: 'acct', className: 'tb-card' }, [
-          h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, '① 账号'),
+          h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, 'A1 账号'),
           h('input', {
             key: 'i', className: 'tb-in', type: 'text', placeholder: 'BDUSS=... 或只贴值（自动补前缀）',
             value: cookie, onChange: (e) => setCookie(e.target.value),
@@ -340,6 +359,12 @@ window.__ModuleLoader__.load({
           ]),
           h('div', { key: 'w', className: 'tb-warn' },
             'BDUSS 等于登录凭证，只存本机（600）。想清除就去贴吧「账号安全 → 退出所有设备」。'),
+          h('div', { key: 'fh', className: 'tb-kv' }, '「读取已关注的吧」会拉当前账号的关注列表，一键填进上面的框（会替换）。'),
+        ]),
+
+        // ── A2 每一轮 ──
+        h('div', { key: 'round', className: 'tb-card' }, [
+          h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, 'A2 每一轮'),
           h('div', { key: 'bl', className: 'tb-label' }, '要刷的吧（一行一个）'),
           h('textarea', {
             key: 'ba', className: 'tb-ta', value: (c.bars || []).join('\n'),
@@ -363,12 +388,6 @@ window.__ModuleLoader__.load({
                 } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
               } }, '读取已关注的吧'),
           ]),
-          h('div', { key: 'fh', className: 'tb-kv' }, '「读取已关注的吧」会拉当前账号的关注列表，一键填进上面的框（会替换）。'),
-        ]),
-
-        // ── ② 每一轮 ──
-        h('div', { key: 'round', className: 'tb-card' }, [
-          h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, '② 每一轮'),
           h('div', { key: 'n', className: 'tb-row' }, [
             h('span', { key: 'a', className: 'tb-kv' }, '读'),
             h('input', { key: 'b', className: 'tb-num', type: 'number', ...num('readPerRound') }),
@@ -404,9 +423,14 @@ window.__ModuleLoader__.load({
           report ? h('pre', { key: 'rp', className: 'tb-pre' }, report.text || '（空）') : null,
         ]),
 
-        // ── ③ 人设 ──
+        ]),
+
+        h(Group, { key: 'B', id: 'B', title: '人设与表达',
+          summary: (c.personaFile ? '人设：文件' : (c.personaText ? '人设：文本' : '人设：未配置'))
+            + (c.styleSamples ? ' · 样本 ' + String(c.styleSamples).split('\n').filter(Boolean).length : '') }, [
+        // ── B1 人设 ──
         h('div', { key: 'persona', className: 'tb-card' }, [
-          h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, '③ 人设'),
+          h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, 'B1 人设'),
           h('textarea', {
             key: 'p', className: 'tb-ta', style: { minHeight: 92 },
             placeholder: '例：一只蓝发小鲸鱼，自称「咱」，说话短、软、爱夸人……',
@@ -444,9 +468,44 @@ window.__ModuleLoader__.load({
           ]),
         ]),
 
+        // ── B2 图片库（待实现）──
+        h('div', { key: 'images', className: 'tb-card' }, [
+          h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, 'B2 图片库'),
+          h('div', { key: 'k', className: 'tb-kv' }, '还没实现。下一步会做成：上传、描述、标签、启用/停用；回帖时可选用（默认关）。'),
+        ]),
+
+        ]),
+
+        h(Group, { key: 'C', id: 'C', title: '行为与规则',
+          summary: c.autoReply ? ('回帖开 · 今天 ' + (status.repliesToday || 0) + '/' + (c.replyPerDay ?? 5)) : '回帖关' }, [
+        // ── C1 回帖规则 ──
+        h('details', { key: 'reply', className: 'tb-card' }, [
+          h('summary', { key: 's' }, ['C1 回帖规则', h('span', { key: 't', className: 'tb-tag' }, c.autoReply ? '已开启' : '默认关')]),
+          h('div', { key: 'b', className: 'tb-body' }, [
+            h(Sw, { key: 'a', on: c.autoReply, onChange: (v) => save({ autoReply: v }),
+              text: '允许回帖（用这个号发公开回复）' }),
+            h(Sw, { key: 'q', on: c.answerQuestions !== false, onChange: (v) => save({ answerQuestions: v }),
+              text: '允许解答别人的疑问（关掉就只接话/共鸣/玩梗）' }),
+            h(Sw, { key: 'g', on: c.toneGate !== false, onChange: (v) => save({ toneGate: v }),
+              text: '拦客服腔（首先/其次/希望对你有帮助…）' }),
+            h('div', { key: 'quota', className: 'tb-row' }, [
+              h('span', { key: 'a', className: 'tb-kv' }, '每轮最多'),
+              h('input', { key: 'b', className: 'tb-num', type: 'number', ...num('replyPerRound') }),
+              h('span', { key: 'c', className: 'tb-kv' }, '条 · 间隔'),
+              h('input', { key: 'd', className: 'tb-num', type: 'number', ...num('replyGapSec') }),
+              h('span', { key: 'e', className: 'tb-kv' }, '秒 · 全天合计'),
+              h('input', { key: 'f', className: 'tb-num', type: 'number', ...num('replyPerDay') }),
+              h('span', { key: 'g', className: 'tb-kv' }, '条'),
+            ]),
+            h('div', { key: 'h', className: 'tb-kv' },
+              '现状：一轮最多 ' + (c.replyPerRound ?? 1) + ' 条，全天最多 ' + (c.replyPerDay ?? 3) + ' 条'
+              + ((c.replyPerRound ?? 1) > (c.replyPerDay ?? 3) ? '（⚠️ 一轮额度比全天还大）' : '')),
+          ]),
+        ]),
+
         // ── ④ 自动化（折叠）──
         h('details', { key: 'auto', className: 'tb-card' }, [
-          h('summary', { key: 's' }, ['④ 自动化', h('span', { key: 't', className: 'tb-tag' }, '签到 · 峰谷定时')]),
+          h('summary', { key: 's' }, ['C2 自动化', h('span', { key: 't', className: 'tb-tag' }, '签到 · 峰谷定时')]),
           h('div', { key: 'b', className: 'tb-body' }, [
             h(Sw, { key: 'sg', on: c.autoSign, onChange: (v) => save({ autoSign: v }),
               text: '自动签到（每天 ' + c.signHour + ' 点后，未关注会先关注）' }),
@@ -473,34 +532,13 @@ window.__ModuleLoader__.load({
           ]),
         ]),
 
-        // ── ⑤ 回帖规则（折叠）──
-        h('details', { key: 'reply', className: 'tb-card' }, [
-          h('summary', { key: 's' }, ['⑤ 回帖规则', h('span', { key: 't', className: 'tb-tag' }, c.autoReply ? '已开启' : '默认关')]),
-          h('div', { key: 'b', className: 'tb-body' }, [
-            h(Sw, { key: 'a', on: c.autoReply, onChange: (v) => save({ autoReply: v }),
-              text: '允许回帖（用这个号发公开回复）' }),
-            h(Sw, { key: 'q', on: c.answerQuestions !== false, onChange: (v) => save({ answerQuestions: v }),
-              text: '允许解答别人的疑问（关掉就只接话/共鸣/玩梗）' }),
-            h(Sw, { key: 'g', on: c.toneGate !== false, onChange: (v) => save({ toneGate: v }),
-              text: '拦客服腔（首先/其次/希望对你有帮助…）' }),
-            h('div', { key: 'quota', className: 'tb-row' }, [
-              h('span', { key: 'a', className: 'tb-kv' }, '每轮最多'),
-              h('input', { key: 'b', className: 'tb-num', type: 'number', ...num('replyPerRound') }),
-              h('span', { key: 'c', className: 'tb-kv' }, '条 · 间隔'),
-              h('input', { key: 'd', className: 'tb-num', type: 'number', ...num('replyGapSec') }),
-              h('span', { key: 'e', className: 'tb-kv' }, '秒 · 全天合计'),
-              h('input', { key: 'f', className: 'tb-num', type: 'number', ...num('replyPerDay') }),
-              h('span', { key: 'g', className: 'tb-kv' }, '条'),
-            ]),
-            h('div', { key: 'h', className: 'tb-kv' },
-              '现状：一轮最多 ' + (c.replyPerRound ?? 1) + ' 条，全天最多 ' + (c.replyPerDay ?? 3) + ' 条'
-              + ((c.replyPerRound ?? 1) > (c.replyPerDay ?? 3) ? '（⚠️ 一轮额度比全天还大）' : '')),
-          ]),
         ]),
 
-        // ── ⑦ 人设演化（折叠）──
+        h(Group, { key: 'D', id: 'D', title: '成长与记录',
+          summary: (c.evolvePersona ? '演化开' : '演化关') + ((c.diaryEnabled === false) ? ' · 日记关' : ' · 日记开') }, [
+        // ── D1 演化 ──
         h('details', { key: 'evolve', className: 'tb-card' }, [
-          h('summary', { key: 's' }, ['⑦ 人设演化', h('span', { key: 't', className: 'tb-tag' }, '吃语料 · 主人点头才改')]),
+          h('summary', { key: 's' }, ['D1 演化', h('span', { key: 't', className: 'tb-tag' }, '吃语料 · 主人点头才改')]),
           h('div', { key: 'b', className: 'tb-body' }, [
             h(Sw, { key: 'e', on: c.evolvePersona === true, onChange: (v) => save({ evolvePersona: v }),
               text: '允许从吧里提炼语气样本（只提建议，不会自动改人设）' }),
@@ -531,7 +569,7 @@ window.__ModuleLoader__.load({
 
         // ── ⑥ 日记（折叠）──
         h('details', { key: 'diary', className: 'tb-card' }, [
-          h('summary', { key: 's' }, ['⑥ 日记', h('span', { key: 't', className: 'tb-tag' }, '公开 / 私人')]),
+          h('summary', { key: 's' }, ['D2 日记', h('span', { key: 't', className: 'tb-tag' }, '公开 / 私人')]),
           h('div', { key: 'b', className: 'tb-body' }, [
             h(Sw, { key: 'e', on: c.diaryEnabled !== false, onChange: (v) => save({ diaryEnabled: v }), text: '允许写日记' }),
             h(Sw, { key: 'p', on: c.diaryPrivate !== false, onChange: (v) => save({ diaryPrivate: v }), text: '允许写私人日记' }),
@@ -553,6 +591,14 @@ window.__ModuleLoader__.load({
             + ' · headless ' + (health.headless && health.headless.ok ? '✓' : '✗')) : null,
         ]),
         health ? h('pre', { key: 'hp', className: 'tb-pre' }, JSON.stringify(health, null, 1)) : null,
+
+        // ── D3 版本与导出（待实现）──
+        h('div', { key: 'versions', className: 'tb-card' }, [
+          h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, 'D3 版本与导出'),
+          h('div', { key: 'k', className: 'tb-kv' }, '还没实现。下一步会做成：版本历史、一键回滚、导出纯文本 / JSON。'),
+        ]),
+
+        ]),
 
         msg ? h('div', { key: 'm', className: 'tb-msg ' + (msg.ok ? 'ok' : 'err') }, msg.text) : null,
       ])
