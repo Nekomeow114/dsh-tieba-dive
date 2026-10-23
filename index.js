@@ -27,6 +27,7 @@ import { checkOutbound } from './lib/guard.mjs'
 import { isSameOrigin } from './lib/origin.mjs'
 import { readProposals, addProposal, getProposal, setStatus, mergeSamples, appendEvolutionNote } from './lib/evolve.mjs'
 import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS } from './lib/persona.mjs'
+import { applyEvolution, canEvolveToday, readEvolutionState } from './lib/evolution.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -300,6 +301,10 @@ export function apply(ctx, config = {}) {
           if (sub === '/cooldown/clear' && req.method === 'POST') {
             tieba.clearCooldown()
             return sendJson(res, 200, { ok: true })
+          }
+          if (sub === '/evolution/state' && req.method === 'GET') {
+            const cfg = cfgOf()
+            return sendJson(res, 200, { ok: true, enabled: !!cfg.evolvePersona, canEvolveToday: canEvolveToday(), last: readEvolutionState(), version: ensurePersona(cfg.styleSamples).version })
           }
           if (sub === '/persona/state' && req.method === 'GET') {
             const p = ensurePersona(cfgOf().styleSamples)
@@ -656,6 +661,41 @@ export function apply(ctx, config = {}) {
         }, { reason: String(args.reason || 'manual') })
         return json({ ok: true, persona: p })
       } catch (e) { return json({ ok: false, error: e.message }) }
+    },
+  })
+
+  tool({
+    name: 'tieba_evolve_apply',
+    description: '把这一轮从吧里学到的变化应用到人设：1~3 句样本 + 可选 1 个旋钮 ±1。每天最多一次，会自动写公开/私人日记。',
+    parameters: {
+      samples: { type: 'array', items: { type: 'string' }, required: true, description: '1~3 句、3~40 字；要改写，不要贴吧友原话' },
+      traitKey: { type: 'string', description: '要动的旋钮：abstract/sharp/gentle/talkative/imageBias（可省）' },
+      traitStep: { type: 'number', description: '方向：1 或 -1，幅度只会取 1' },
+      reason: { type: 'string', description: '为什么这么改（写进日记与版本历史）' },
+      narrative: { type: 'string', description: '公开日记里那段人设口吻的叙述（可省）' },
+      stats: { type: 'object', description: '事实字段：bars/postsSeen/postTypes/replies/repliesGot/deleted/images/imageNotes' },
+    },
+    execute: async (args) => {
+      const cfg = cfgOf()
+      if (!cfg.evolvePersona) return json({ ok: false, error: '人设演化是关着的' })
+      if (!canEvolveToday()) return json({ ok: false, error: '今天已经演化过了（每天最多一次）' })
+      const r = applyEvolution({
+        samples: args.samples, traitKey: args.traitKey, traitStep: args.traitStep,
+        reason: args.reason, narrative: args.narrative, stats: args.stats,
+      })
+      return json(r.ok ? { ok: true, record: r.record, version: r.persona.version } : r)
+    },
+  })
+
+  tool({
+    name: 'tieba_evolve_status',
+    description: '看今天还能不能演化、上次演化是什么时候、当前版本。',
+    parameters: {},
+    execute: async () => {
+      const cfg = cfgOf()
+      const st = readEvolutionState()
+      const p = ensurePersona(cfg.styleSamples)
+      return json({ ok: true, enabled: !!cfg.evolvePersona, canEvolveToday: canEvolveToday(), lastDate: st.lastDate || '', count: st.count || 0, version: p.version, traits: p.traits })
     },
   })
 

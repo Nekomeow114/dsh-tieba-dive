@@ -105,6 +105,26 @@ const rb = per.rollback(p1.version)
 ok(rb.ok && rb.persona.version > p2.version, '人设：回滚生成新版本')
 ok(per.renderForPrompt(rb.persona).includes('核心层'), '人设：提示词包含核心层')
 
+// 11.6 自动演化（每天一次、小步、双日记）
+const evo2 = await import('../lib/evolution.mjs')
+const fsx = await import('node:fs')
+const pathx = await import('node:path')
+const r1 = evo2.applyEvolution({
+  samples: ['行吧，那就这样', '有点意思'],
+  traitKey: 'gentle', traitStep: 5,
+  reason: 'test', narrative: '今天学了两句。',
+  stats: { bars: ['deepseek'], postsSeen: 3, replies: 1, repliesGot: 2, deleted: 0, images: 0 },
+})
+ok(r1.ok, '演化：首次应用成功', r1.error || '')
+ok(r1.record.trait.to - r1.record.trait.from === 1, '演化：旋钮单次只动 1 格')
+ok(r1.record.samplesAdded.length === 2, '演化：样本 1~3 条')
+ok(!evo2.applyEvolution({ samples: ['再来一句'] }).ok, '演化：一天只能一次')
+const diaryDir = pathx.join(process.env.DSH_HOME, 'tieba-duty', 'diary')
+const pub = fsx.readFileSync(pathx.join(diaryDir, 'public.md'), 'utf8')
+const priv = fsx.readFileSync(pathx.join(diaryDir, 'private.md'), 'utf8')
+ok(pub.includes('版本 v') && priv.includes('旋钮：'), '演化：公开/私人日记都写了')
+ok(priv.includes('回帖：') && priv.includes('被回复：'), '演化：私人日记含事实字段')
+
 // 11.65 配置字段往返（防「加了字段但 normalize 丢了」）
 {
   const { DEFAULTS, normalize } = await import('../lib/config.mjs')
