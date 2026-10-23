@@ -110,6 +110,7 @@ window.__ModuleLoader__.load({
       const [diary, setDiary] = React.useState(null)
       const [runLog, setRunLog] = React.useState(null)
       const [health, setHealth] = React.useState(null)
+      const [proposals, setProposals] = React.useState([])
 
       const refresh = React.useCallback(async () => {
         try {
@@ -124,6 +125,10 @@ window.__ModuleLoader__.load({
         }
       }, [])
       React.useEffect(() => { refresh() }, [refresh])
+      const loadProposals = React.useCallback(async () => {
+        try { const r = await jget('/persona/proposals'); setProposals(r.proposals || []) } catch { /* ignore */ }
+      }, [])
+      React.useEffect(() => { loadProposals() }, [loadProposals])
 
       React.useEffect(() => {
         let alive = true
@@ -485,6 +490,37 @@ window.__ModuleLoader__.load({
             h('div', { key: 'h', className: 'tb-kv' },
               '现状：一轮最多 ' + (c.replyPerRound ?? 1) + ' 条，全天最多 ' + (c.replyPerDay ?? 3) + ' 条'
               + ((c.replyPerRound ?? 1) > (c.replyPerDay ?? 3) ? '（⚠️ 一轮额度比全天还大）' : '')),
+          ]),
+        ]),
+
+        // ── ⑦ 人设演化（折叠）──
+        h('details', { key: 'evolve', className: 'tb-card' }, [
+          h('summary', { key: 's' }, ['⑦ 人设演化', h('span', { key: 't', className: 'tb-tag' }, '吃语料 · 主人点头才改')]),
+          h('div', { key: 'b', className: 'tb-body' }, [
+            h(Sw, { key: 'e', on: c.evolvePersona === true, onChange: (v) => save({ evolvePersona: v }),
+              text: '允许从吧里提炼语气样本（只提建议，不会自动改人设）' }),
+            h('div', { key: 'h', className: 'tb-kv' }, '每一轮最多提 3 句，短、不带路径和链接；觉得像了再采纳。'),
+            proposals.filter((p) => p.status === 'pending').length
+              ? h('div', { key: 'list' }, proposals.filter((p) => p.status === 'pending').map((p) =>
+                h('div', { key: p.id, style: { borderTop: '1px solid #eef2f8', marginTop: 8, paddingTop: 8 } }, [
+                  h('div', { key: 's', style: { fontSize: 13, lineHeight: 1.8 } }, p.samples.map((x, i) => h('div', { key: i }, '· ' + x))),
+                  p.note ? h('div', { key: 'n', className: 'tb-kv' }, p.note) : null,
+                  h('div', { key: 'r', className: 'tb-row' }, [
+                    h('button', { key: 'a', className: 'tb-btn ghost sm', disabled: busy,
+                      onClick: async () => {
+                        setBusy(true)
+                        try { await jpost('/persona/apply', { id: p.id }); await loadProposals(); await refresh(); setMsg({ ok: true, text: '已采纳，样本已并进人设' }) }
+                        catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+                      } }, '采纳'),
+                    h('button', { key: 'd', className: 'tb-btn ghost sm', disabled: busy,
+                      onClick: async () => {
+                        setBusy(true)
+                        try { await jpost('/persona/dismiss', { id: p.id }); await loadProposals() }
+                        catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+                      } }, '忽略'),
+                  ]),
+                ])))
+              : h('div', { key: 'none', className: 'tb-kv' }, '还没有待处理的建议。'),
           ]),
         ]),
 
