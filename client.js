@@ -128,6 +128,7 @@ window.__ModuleLoader__.load({
       const [runLog, setRunLog] = React.useState(null)
       const [health, setHealth] = React.useState(null)
       const [proposals, setProposals] = React.useState([])
+      const [persona, setPersona] = React.useState(null)
 
       const refresh = React.useCallback(async () => {
         try {
@@ -146,6 +147,10 @@ window.__ModuleLoader__.load({
         try { const r = await jget('/persona/proposals'); setProposals(r.proposals || []) } catch { /* ignore */ }
       }, [])
       React.useEffect(() => { loadProposals() }, [loadProposals])
+      const loadPersona = React.useCallback(async () => {
+        try { const r = await jget('/persona/state'); setPersona(r.persona) } catch { /* ignore */ }
+      }, [])
+      React.useEffect(() => { loadPersona() }, [loadPersona])
 
       React.useEffect(() => {
         let alive = true
@@ -431,6 +436,27 @@ window.__ModuleLoader__.load({
         // ── B1 人设 ──
         h('div', { key: 'persona', className: 'tb-card' }, [
           h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, 'B1 人设'),
+          h('div', { key: 'pv', className: 'tb-kv', style: { marginBottom: 8 } },
+            persona ? ('当前版本 v' + persona.version + ' · 核心层（名字/自称/底线）已锁死，不可改') : '读取人设版本中…'),
+          persona ? h('div', { key: 'traits' }, [
+            h('div', { key: 'l', className: 'tb-label' }, '性格旋钮（0~10）'),
+            ...([['abstract','抽象度'],['sharp','毒舌度'],['gentle','温柔度'],['talkative','话痨度'],['imageBias','发图倾向']].map(([k, label]) =>
+              h('div', { key: k, className: 'tb-row' }, [
+                h('span', { key: 'a', className: 'tb-kv', style: { minWidth: 76 } }, label),
+                h('input', { key: 'b', type: 'range', min: 0, max: 10, value: persona.traits[k],
+                  style: { flex: 1 },
+                  onChange: (e) => setPersona({ ...persona, traits: { ...persona.traits, [k]: Number(e.target.value) } }) }),
+                h('span', { key: 'c', className: 'tb-num', style: { textAlign: 'center' } }, String(persona.traits[k])),
+              ]))),
+            h('div', { key: 'r', className: 'tb-row' }, [
+              h('button', { key: 'b', className: 'tb-btn ghost sm', disabled: busy,
+                onClick: async () => {
+                  setBusy(true)
+                  try { const r = await jpost('/persona/traits', { traits: persona.traits, reason: 'ui' }); setPersona(r.persona); setMsg({ ok: true, text: '旋钮已保存（v' + r.persona.version + '）' }) }
+                  catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+                } }, '保存旋钮'),
+            ]),
+          ]) : null,
           h('textarea', {
             key: 'p', className: 'tb-ta', style: { minHeight: 92 },
             placeholder: '例：一只蓝发小鲸鱼，自称「咱」，说话短、软、爱夸人……',
@@ -450,12 +476,19 @@ window.__ModuleLoader__.load({
           h('textarea', {
             key: 'ss', className: 'tb-ta', style: { minHeight: 84 },
             placeholder: '例：\n「这书我也在看，节奏慢但挺上头」\n「哈？连这个都要问」\n「被你这么一说，我也有点想看了」',
-            value: c.styleSamples || '',
-            onChange: (e) => setCfg({ ...c, styleSamples: e.target.value }),
+            value: persona ? persona.voice.samples.join('\n') : (c.styleSamples || ''),
+            onChange: (e) => setPersona((cur) => cur ? { ...cur, voice: { ...cur.voice, samples: e.target.value.split('\n') } } : cur),
           }),
           h('div', { key: 'ssr', className: 'tb-row' }, [
             h('button', { key: 'b', className: 'tb-btn ghost sm', disabled: busy,
-              onClick: () => save({ styleSamples: c.styleSamples || '' }) }, '保存语气样本'),
+              onClick: async () => {
+                setBusy(true)
+                try {
+                  const samples = (persona ? persona.voice.samples : String(c.styleSamples || '').split('\n')).map((x) => x.trim()).filter(Boolean)
+                  const r = await jpost('/persona/voice', { samples, reason: 'ui' })
+                  setPersona(r.persona); setMsg({ ok: true, text: '语气样本已保存（v' + r.persona.version + '）' })
+                } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+              } }, '保存语气样本'),
             h('span', { key: 'k', className: 'tb-kv' }, '模型回帖前会读这几句，照着学长短和口气'),
           ]),
           h('details', { key: 'adv2', style: { marginTop: 8 } }, [

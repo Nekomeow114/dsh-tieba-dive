@@ -26,6 +26,7 @@ import { localStamp } from './lib/time.mjs'
 import { checkOutbound } from './lib/guard.mjs'
 import { isSameOrigin } from './lib/origin.mjs'
 import { readProposals, addProposal, getProposal, setStatus, mergeSamples, appendEvolutionNote } from './lib/evolve.mjs'
+import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS } from './lib/persona.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -300,6 +301,27 @@ export function apply(ctx, config = {}) {
             tieba.clearCooldown()
             return sendJson(res, 200, { ok: true })
           }
+          if (sub === '/persona/state' && req.method === 'GET') {
+            const p = ensurePersona(cfgOf().styleSamples)
+            return sendJson(res, 200, { ok: true, persona: p, core: CORE, labels: TRAIT_LABELS, keys: TRAIT_KEYS, prompt: renderForPrompt(p) })
+          }
+          if (sub === '/persona/traits' && req.method === 'POST') {
+            const body = JSON.parse((await readBody(req)) || '{}')
+            try { return sendJson(res, 200, { ok: true, persona: updatePersona({ traits: body.traits || {} }, { reason: String(body.reason || 'ui') }) }) }
+            catch (e) { return sendJson(res, 500, { ok: false, error: e.message }) }
+          }
+          if (sub === '/persona/voice' && req.method === 'POST') {
+            const body = JSON.parse((await readBody(req)) || '{}')
+            try { return sendJson(res, 200, { ok: true, persona: updatePersona({ voice: { samples: body.samples || [] } }, { reason: String(body.reason || 'ui') }) }) }
+            catch (e) { return sendJson(res, 500, { ok: false, error: e.message }) }
+          }
+          if (sub === '/persona/versions' && req.method === 'GET') {
+            return sendJson(res, 200, { ok: true, versions: listVersions(), current: ensurePersona(cfgOf().styleSamples).version })
+          }
+          if (sub === '/persona/rollback' && req.method === 'POST') {
+            const body = JSON.parse((await readBody(req)) || '{}')
+            return sendJson(res, 200, rollback(Number(body.version), { reason: `rollback v${body.version}` }))
+          }
           if (sub === '/persona/proposals' && req.method === 'GET') {
             return sendJson(res, 200, { ok: true, proposals: readProposals() })
           }
@@ -308,8 +330,9 @@ export function apply(ctx, config = {}) {
             const p = getProposal(String(body.id || ''))
             if (!p) return sendJson(res, 404, { ok: false, error: '没有这条建议' })
             const cfg = cfgOf()
-            const merged = mergeSamples(String(cfg.styleSamples || '').split('\n'), p.samples)
-            writeConfig({ ...cfg, styleSamples: merged.join('\n') })
+            const pp = ensurePersona(cfg.styleSamples)
+            const merged = mergeSamples(pp.voice.samples, p.samples)
+            updatePersona({ voice: { samples: merged } }, { reason: '采纳演化建议' })
             // 人设文件里也留一笔（只追加）
             try {
               const pf = String(cfg.personaFile || '').trim()
@@ -610,8 +633,44 @@ export function apply(ctx, config = {}) {
     execute: async () => {
       const cfg = cfgOf()
       const p = resolvePersona(cfg)
-      return json({ ...p, styleSamples: cfg.styleSamples || '' })
+      const pp = ensurePersona(cfg.styleSamples)
+      return json({ ...p, styleSamples: pp.voice.samples.join('\n') || cfg.styleSamples || '', persona: pp, prompt: renderForPrompt(pp) })
     },
+  })
+
+  tool({
+    name: 'tieba_persona_update',
+    description: '改人设的可变层：性格旋钮（0~10）或语气样本。核心层（名字/自称/底线）改不了。',
+    parameters: {
+      traits: { type: 'object', description: '要改的旋钮，例如 {"gentle":8,"talkative":3}' },
+      samples: { type: 'array', items: { type: 'string' }, description: '新的语气样本（最多 10 条，会整体替换）' },
+      reason: { type: 'string', description: '为什么改（会写进版本历史）' },
+    },
+    execute: async (args) => {
+      const cfg = cfgOf()
+      if (cfg.evolvePersona && args.reason == null) return json({ ok: false, error: '演化开着时，改人设要写 reason' })
+      try {
+        const p = updatePersona({
+          traits: args.traits || {},
+          voice: Array.isArray(args.samples) ? { samples: args.samples } : {},
+        }, { reason: String(args.reason || 'manual') })
+        return json({ ok: true, persona: p })
+      } catch (e) { return json({ ok: false, error: e.message }) }
+    },
+  })
+
+  tool({
+    name: 'tieba_persona_versions',
+    description: '列出人设的历史版本（版本号 / 时间 / 原因）。',
+    parameters: {},
+    execute: async () => json({ ok: true, versions: listVersions(), current: ensurePersona(cfgOf().styleSamples).version }),
+  })
+
+  tool({
+    name: 'tieba_persona_rollback',
+    description: '回滚到某个历史版本（会作为新版本写回，历史不丢）。',
+    parameters: { version: { type: 'number', required: true, description: '要回滚到的版本号' } },
+    execute: async (args) => json(rollback(Number(args.version), { reason: `rollback v${args.version}` })),
   })
 
   tool({
@@ -865,5 +924,6 @@ export function apply(ctx, config = {}) {
   else log(`curl ✓ ${curl0.version}`)
 
   const c0 = cfgOf()
+  try { ensurePersona(c0.styleSamples) } catch (e) { log(`人设初始化失败：${e.message}`) }
   log(`已挂载（${c0.bars.join(' / ')}；签到=${c0.autoSign ? '开' : '关'}；回帖=${c0.autoReply ? `开(${c0.replyPerDay}/天)` : '关'}）`)
 }

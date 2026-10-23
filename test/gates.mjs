@@ -92,6 +92,19 @@ ok(evo.mergeSamples(new Array(40).fill('x').map((_, i) => 's' + i), ['new']).len
 const withNote = evo.appendEvolutionNote('正文', ['哈？这也行'])
 ok(withNote.includes('正文') && withNote.includes('演化记录') && withNote.includes('哈？这也行'), '演化：只追加不覆盖正文')
 
+// 11.5 三层人设 + 快照回滚
+const per = await import('../lib/persona.mjs')
+const p1 = per.ensurePersona('样本一\n样本二')
+ok(p1.version >= 1 && p1.voice.samples.includes('样本一'), '人设：迁移旧样本')
+const p2 = per.updatePersona({ traits: { gentle: 11, sharp: -3, imageBias: 2 }, core: { name: 'X' } }, { reason: 'test' })
+ok(p2.traits.gentle === 10 && p2.traits.sharp === 0, '人设：旋钮夹到 0~10')
+ok(p2.core.name === per.CORE.name, '人设：核心层改不动')
+ok(p2.version === p1.version + 1, '人设：每次修改版本 +1')
+ok(per.listVersions().length >= 1, '人设：有历史快照')
+const rb = per.rollback(p1.version)
+ok(rb.ok && rb.persona.version > p2.version, '人设：回滚生成新版本')
+ok(per.renderForPrompt(rb.persona).includes('核心层'), '人设：提示词包含核心层')
+
 // 11.65 配置字段往返（防「加了字段但 normalize 丢了」）
 {
   const { DEFAULTS, normalize } = await import('../lib/config.mjs')
