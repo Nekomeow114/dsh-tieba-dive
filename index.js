@@ -354,6 +354,15 @@ export function apply(ctx, config = {}) {
             const body = JSON.parse((await readBody(req)) || '{}')
             return sendJson(res, 200, removeImage(String(body.id || '')))
           }
+          if (sub === '/images/upload-test' && req.method === 'POST') {
+            const body = JSON.parse((await readBody(req)) || '{}')
+            const it = imageFile(String(body.id || ''))
+            if (!it) return sendJson(res, 404, { ok: false, error: '没有这张图' })
+            try {
+              const r = await tieba.uploadImage(it.abs, String(body.kw || 'deepseek'))
+              return sendJson(res, 200, { ok: !!r.ok, imageInfo: r.imageInfo || '', imageSrc: r.imageSrc || '', error: r.error || '' })
+            } catch (e) { return sendJson(res, 500, { ok: false, error: e.message }) }
+          }
           if (sub === '/images/raw' && req.method === 'GET') {
             const u = new URL(req.url, 'http://127.0.0.1')
             const it = imageFile(String(u.searchParams.get('id') || ''))
