@@ -1799,12 +1799,14 @@ window.__ModuleLoader__.load({
 
             h('div', { key: 'div', className: 'tb-divider' }),
 
-            h('div', { key: 'versions' }, [
-              h('div', { key: 'hd', className: 'tb-subcard-title' }, [
-                h('span', { key: 't', style: { fontWeight: 700, fontSize: 13, color: '#0f172a' } }, '版本与导出'),
+            h('details', { key: 'versions', className: 'tb-subcard' }, [
+              h('summary', { key: 'hd', className: 'tb-subcard-title', style: { cursor: 'pointer' } }, [
+                h('span', { key: 't', style: { fontWeight: 700, fontSize: 13, color: '#0f172a' } },
+                  '版本与导出' + (persona ? ' · v' + persona.version : '')),
                 h('span', { key: 'cur', className: 'tb-kv' },
-                  persona ? ('当前 v' + persona.version + ' · 共 ' + versions.length + ' 个历史快照') : ''),
+                  persona ? ('共 ' + versions.length + ' 个历史快照') : ''),
               ]),
+              h('div', { key: 'vbd', style: { marginTop: 8 } }, [
               h('div', { key: 'e', className: 'tb-row', style: { marginTop: 4 } }, [
                 h('button', { key: 't', className: 'tb-btn soft sm', disabled: busy, onClick: () => exportPersona('text') }, '📤 导出当前（文本）'),
                 h('button', { key: 'j', className: 'tb-btn ghost sm', disabled: busy, onClick: () => exportPersona('json') }, '📦 导出当前（JSON）'),
@@ -1830,6 +1832,7 @@ window.__ModuleLoader__.load({
                     ]),
                   ])))
                 : h('div', { key: 'none', className: 'tb-kv' }, '还没有快照。改一次人设就会生成快照。'),
+              ]),
             ]),
           ]),
 
