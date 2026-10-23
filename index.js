@@ -27,7 +27,7 @@ import { checkOutbound } from './lib/guard.mjs'
 import { isSameOrigin } from './lib/origin.mjs'
 import { readProposals, addProposal, getProposal, setStatus, mergeSamples, appendEvolutionNote } from './lib/evolve.mjs'
 import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS } from './lib/persona.mjs'
-import { applyEvolution, canEvolveToday, readEvolutionState } from './lib/evolution.mjs'
+import { applyEvolution, canEvolveToday, readEvolutionState, driftReport, pauseEvolution, resumeEvolution } from './lib/evolution.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -304,7 +304,17 @@ export function apply(ctx, config = {}) {
           }
           if (sub === '/evolution/state' && req.method === 'GET') {
             const cfg = cfgOf()
-            return sendJson(res, 200, { ok: true, enabled: !!cfg.evolvePersona, canEvolveToday: canEvolveToday(), last: readEvolutionState(), version: ensurePersona(cfg.styleSamples).version })
+            return sendJson(res, 200, {
+              ok: true, enabled: !!cfg.evolvePersona, canEvolveToday: canEvolveToday(),
+              last: readEvolutionState(), version: ensurePersona(cfg.styleSamples).version, drift: driftReport(),
+            })
+          }
+          if (sub === '/evolution/pause' && req.method === 'POST') {
+            const body = JSON.parse((await readBody(req)) || '{}')
+            return sendJson(res, 200, pauseEvolution(String(body.reason || '主人手动暂停')))
+          }
+          if (sub === '/evolution/resume' && req.method === 'POST') {
+            return sendJson(res, 200, resumeEvolution())
           }
           if (sub === '/persona/state' && req.method === 'GET') {
             const p = ensurePersona(cfgOf().styleSamples)
@@ -697,6 +707,32 @@ export function apply(ctx, config = {}) {
       const p = ensurePersona(cfg.styleSamples)
       return json({ ok: true, enabled: !!cfg.evolvePersona, canEvolveToday: canEvolveToday(), lastDate: st.lastDate || '', count: st.count || 0, version: p.version, traits: p.traits })
     },
+  })
+
+  tool({
+    name: 'tieba_evolve_control',
+    description: '暂停或恢复人设演化。暂停只停演化，日记和回帖照常。',
+    parameters: {
+      action: { type: 'string', required: true, description: 'pause 或 resume' },
+      reason: { type: 'string', description: '暂停原因（会写进状态和日记）' },
+    },
+    execute: async (args) => {
+      const action = String(args.action || '')
+      if (action === 'pause') {
+        const r = pauseEvolution(String(args.reason || '手动暂停'))
+        try { appendDiary('private', `⏸ 手动暂停演化：${args.reason || '（未写原因）'}`) } catch { /* ignore */ }
+        return json(r)
+      }
+      if (action === 'resume') return json(resumeEvolution())
+      return json({ ok: false, error: 'action 只能是 pause / resume' })
+    },
+  })
+
+  tool({
+    name: 'tieba_evolve_drift',
+    description: '看当前人设和最初版本差了多少（0~1），以及是否该暂停。',
+    parameters: {},
+    execute: async () => json(driftReport()),
   })
 
   tool({

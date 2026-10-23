@@ -125,6 +125,23 @@ const priv = fsx.readFileSync(pathx.join(diaryDir, 'private.md'), 'utf8')
 ok(pub.includes('版本 v') && priv.includes('旋钮：'), '演化：公开/私人日记都写了')
 ok(priv.includes('回帖：') && priv.includes('被回复：'), '演化：私人日记含事实字段')
 
+// 11.62 保险机制：漂移 / 暂停 / 被删联动
+const dr = evo2.driftReport()
+ok(dr.score >= 0 && dr.score <= 1 && ['ok', 'warn', 'high'].includes(dr.level), '保险：漂移分在 0~1', JSON.stringify(dr))
+evo2.pauseEvolution('测试暂停')
+ok(evo2.readEvolutionState().paused === true, '保险：暂停生效')
+ok(!evo2.applyEvolution({ samples: ['暂停后不该生效'] }).ok, '保险：暂停后不能演化')
+evo2.resumeEvolution()
+ok(evo2.readEvolutionState().paused === false, '保险：恢复生效')
+{
+  // 写三条“被删 1”的记录，模拟 7 天内累计 3 条
+  const f = pathx.join(process.env.DSH_HOME, 'tieba-duty', 'evolution.jsonl')
+  const lines = [1, 2, 3].map(() => JSON.stringify({ at: new Date().toISOString().replace('T', ' ').slice(0, 16), stats: { deleted: 1 } }))
+  fsx.appendFileSync(f, lines.join('\n') + '\n')
+  ok(evo2.checkDeletionPause() === true, '保险：被删累计 3 条触发自动暂停')
+  evo2.resumeEvolution()
+}
+
 // 11.65 配置字段往返（防「加了字段但 normalize 丢了」）
 {
   const { DEFAULTS, normalize } = await import('../lib/config.mjs')
