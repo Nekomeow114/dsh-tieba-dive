@@ -898,6 +898,7 @@ window.__ModuleLoader__.load({
       const [images, setImages] = React.useState([])
       const [styleState, setStyleState] = React.useState(null)
       const [timeline, setTimeline] = React.useState([])
+      const [styleLib, setStyleLib] = React.useState([])
 
       const refresh = React.useCallback(async () => {
         try {
@@ -1790,6 +1791,8 @@ window.__ModuleLoader__.load({
               : h('div', { key: 'sk0', className: 'tb-subcard', style: { marginTop: 0 } },
                 h('span', { className: 'tb-kv' }, '还没泡过任何吧。先在上面填「要刷的吧」，再打开学习，跑一轮后这里才会出现那个吧的语料——只学你填的那些吧。')),
 
+            styleLib.length ? h('div', { key: 'lib', className: 'tb-label', style: { marginTop: 10 } },
+              '风格库：' + styleLib.slice(0, 4).map((b) => b.kw + ' ' + b.count + ' 条（均 ' + b.avgLen + ' 字）').join(' · ')) : null,
             h('div', { key: 'tl', className: 'tb-label' }, '学习时间轴'),
             timeline.length
               ? h('div', { key: 'tll', className: 'tb-timeline' }, timeline.slice(0, 8).map((e, i) =>

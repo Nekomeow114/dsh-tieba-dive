@@ -30,6 +30,7 @@ import { ensurePersona, readPersona, updatePersona, listVersions, rollback, rend
 import { applyEvolution, canEvolveToday, readEvolutionState, driftReport, pauseEvolution, resumeEvolution } from './lib/evolution.mjs'
 import { observeBar, getStyle, renderStyle, bestSamplesFor, styleSummary, effectiveTraits, MODES, soakEffect, SOAK_EVERY } from './lib/style.mjs'
 import { appendTimeline, readTimeline } from './lib/timeline.mjs'
+import { ingest as ingestStyle, retrieve as retrieveStyle, librarySummary } from './lib/stylelib.mjs'
 import { toText, toJson } from './lib/persona-export.mjs'
 import { listImages, addImage, updateImage, removeImage, publicView, usableImages, pickImage, markUsed, imageFile, biasHint, pendingDescriptions } from './lib/images.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
@@ -309,6 +310,9 @@ export function apply(ctx, config = {}) {
           if (sub === '/timeline' && req.method === 'GET') {
             const n = Number(new URL(req.url, 'http://127.0.0.1').searchParams.get('n')) || 20
             return sendJson(res, 200, { ok: true, entries: readTimeline(n) })
+          }
+          if (sub === '/stylelib/state' && req.method === 'GET') {
+            return sendJson(res, 200, { ok: true, bars: librarySummary() })
           }
           if (sub === '/style/state' && req.method === 'GET') {
             return sendJson(res, 200, { ok: true, bars: styleSummary() })
@@ -962,6 +966,9 @@ export function apply(ctx, config = {}) {
         const hot = await tieba.hotReplies(tid, { rn: 30 })
         r.hotFloors = hot.slice(0, 6).map((p) => ({ floor: p.floor, likes: p.likes, replies: p.replies, text: p.text }))
         r.likesKnown = true
+        if (cfgOf().evolvePersona && r.kw) {
+          try { r.styleLib = ingestStyle(r.kw, hot) } catch { /* 入库失败不影响读帖 */ }
+        }
       } catch (e) {
         r.likesKnown = false
         log(`热门回复接口没成（用楼中楼数代替）：${e.message}`)
@@ -981,6 +988,19 @@ export function apply(ctx, config = {}) {
     description: '签到。不给 kw 就签配置里的所有吧（signAllFollowed 开启时并上全部关注）；一天一次。',
     parameters: { kw: { type: 'string', description: '只签某一个吧（可省）' } },
     execute: async (args) => json({ ok: true, results: await doSign(args.kw) }),
+  })
+
+  tool({
+    name: 'tieba_style_refs',
+    description: '从风格库检索这个吧的高赞回复当参考（few-shot）。只学口气，不许照抄。',
+    parameters: {
+      kw: { type: 'string', required: true, description: '吧名' },
+      topic: { type: 'string', description: '帖子标题或一两句内容，用来找相似的参考' },
+    },
+    execute: async (args) => {
+      const r = retrieveStyle(String(args.kw), String(args.topic || ''), 4)
+      return json({ ...r, note: '这些是这个吧的真实高赞回复，只学句式和口气，不要复制原句。' })
+    },
   })
 
   tool({

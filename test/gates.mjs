@@ -194,6 +194,21 @@ const upOk = parseUploadResponse("window.imageUploadResult=1;var result={imageSr
 ok(upOk.ok && upOk.imageInfo === 'abc123,1,1,false' && upOk.imageSrc.includes('m.tiebaimg.com'), '图床：解析成功响应')
 ok(!parseUploadResponse('{"errorMsg":"图片上传失败，请重新上传"}').ok, '图床：失败响应识别')
 
+// 11.61 风格库（检索式）
+{
+  const lib = await import('../lib/stylelib.mjs')
+  const ins = lib.ingest('测试吧', [
+    { text: '这书我也在看，节奏慢但挺上头', likes: 30, floor: 3 },
+    { text: '3', likes: 99, floor: 4 },                 // 水楼
+    { text: '加群领取资源', likes: 50, floor: 5 },       // 广告
+    { text: '这书我也在看，节奏慢但挺上头', likes: 10, floor: 6 }, // 重复
+  ])
+  ok(ins.ok && ins.added === 1 && ins.total === 1, '风格库：过滤水楼/广告/重复', JSON.stringify(ins))
+  ok(ins.stats.avgLen > 0, '风格库：统计平均句长')
+  const refs = lib.retrieve('测试吧', '这书好看吗', 3)
+  ok(refs.ok && refs.refs.length === 1 && !refs.empty, '风格库：能按话题检索')
+}
+
 // 11.62 图片库
 const img = await import('../lib/images.mjs')
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
