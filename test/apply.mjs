@@ -18,7 +18,7 @@ const ok = (cond, label, extra = '') => {
 
 /** 造一个假 ctx；withWeb=false 时**连 webServer 属性都没有**，模拟 headless */
 function makeCtx(withWeb) {
-  const calls = { tools: [], routes: [], settings: 0, effects: 0, toolObjs: [] }
+  const calls = { tools: [], routes: [], settings: 0, effects: 0, toolObjs: [], routeObjs: [] }
   const ctx = {
     settings: { register: () => { calls.settings += 1 } },
     tools: { register: (t) => { calls.tools.push(t.name); calls.toolObjs.push(t) } },
@@ -27,7 +27,7 @@ function makeCtx(withWeb) {
     // Cordis 的动态注入：服务就绪才回调；这里模拟「有就立刻回调」
     inject: (deps, cb) => { if (withWeb && deps.includes('webServer')) cb(ctx) },
   }
-  if (withWeb) ctx.webServer = { register: (r) => calls.routes.push(r.path) }
+  if (withWeb) ctx.webServer = { register: (r) => { calls.routes.push(r.path); calls.routeObjs.push(r) } }
   return { ctx, calls }
 }
 
@@ -62,6 +62,8 @@ function makeCtx(withWeb) {
   ok(undeclared.length === 0, '所有 setXxx 都有对应 state 声明', undeclared.join(','))
   const unknown = [...used].filter((k) => !(k in DEFAULTS))
   ok(unknown.length === 0, '设置页引用的配置键都在 DEFAULTS 里', unknown.join(','))
+  ok(!/JSON\.parse\(\(await readBody/.test((await import('node:fs')).readFileSync(new URL('../index.js', import.meta.url), 'utf8')),
+    'HTTP 处理里没有对 readBody 二次 JSON.parse')
 }
 
 // 场景 A：headless（没有 webServer）
@@ -103,9 +105,29 @@ const c3 = makeCtx(false)
 try { mod.apply(c3.ctx, {}) } catch (e) { /* ignore */ }
 await new Promise((r) => setTimeout(r, 50))
 ok(c3.calls.routes.length === 0, 'webServer 未就绪时先不挂路由')
-c3.ctx.webServer = { register: (r) => c3.calls.routes.push(r.path) }
+let c3route = null
+c3.ctx.webServer = { register: (r) => { c3.calls.routes.push(r.path); c3route = r } }
 await new Promise((r) => setTimeout(r, 1600))
 ok(c3.calls.routes.includes('/api/tieba-duty'), 'webServer 就绪后自动挂上（轮询兜底）', String(c3.calls.routes.length))
+
+// 真调一次 /images：readBody 已经是对象，不能再 JSON.parse（1.15.3 的坑）
+{
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+  const call = (method, url, obj) => new Promise((resolve) => {
+    const body = obj ? JSON.stringify(obj) : ''
+    const req = {
+      method, url, headers: {},
+      on: (ev, cb) => { if (ev === 'data' && body) cb(Buffer.from(body)); if (ev === 'end') cb() },
+      destroy: () => {},
+    }
+    const res = { setHeader: () => {}, writeHead: () => {}, end: (b) => resolve(JSON.parse(String(b))) }
+    c3route.handler(req, res)
+  })
+  const up = await call('POST', '/api/tieba-duty/images', { name: 't.png', dataUrl: PNG, desc: '测试图', tags: ['贴贴'] })
+  ok(up.ok && up.image && up.image.id, '/images 上传接口可用（body 不二次解析）', up.error || '')
+  const ls = await call('GET', '/api/tieba-duty/images')
+  ok(ls.ok && ls.images.length === 1, '/images 列表能读到刚上传的图', String(ls.images && ls.images.length))
+}
 
 fs.rmSync(tmp, { recursive: true, force: true })
 process.exit(bad ? 1 : 0)

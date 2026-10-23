@@ -312,7 +312,7 @@ export function apply(ctx, config = {}) {
             })
           }
           if (sub === '/evolution/pause' && req.method === 'POST') {
-            const body = JSON.parse((await readBody(req)) || '{}')
+            const body = (await readBody(req)) || {}
             return sendJson(res, 200, pauseEvolution(String(body.reason || '主人手动暂停')))
           }
           if (sub === '/evolution/resume' && req.method === 'POST') {
@@ -323,12 +323,12 @@ export function apply(ctx, config = {}) {
             return sendJson(res, 200, { ok: true, persona: p, core: CORE, labels: TRAIT_LABELS, keys: TRAIT_KEYS, prompt: renderForPrompt(p) })
           }
           if (sub === '/persona/traits' && req.method === 'POST') {
-            const body = JSON.parse((await readBody(req)) || '{}')
+            const body = (await readBody(req)) || {}
             try { return sendJson(res, 200, { ok: true, persona: updatePersona({ traits: body.traits || {} }, { reason: String(body.reason || 'ui') }) }) }
             catch (e) { return sendJson(res, 500, { ok: false, error: e.message }) }
           }
           if (sub === '/persona/voice' && req.method === 'POST') {
-            const body = JSON.parse((await readBody(req)) || '{}')
+            const body = (await readBody(req)) || {}
             try { return sendJson(res, 200, { ok: true, persona: updatePersona({ voice: { samples: body.samples || [] } }, { reason: String(body.reason || 'ui') }) }) }
             catch (e) { return sendJson(res, 500, { ok: false, error: e.message }) }
           }
@@ -343,19 +343,19 @@ export function apply(ctx, config = {}) {
             })
           }
           if (sub === '/images' && req.method === 'POST') {
-            const body = JSON.parse((await readBody(req)) || '{}')
+            const body = (await readBody(req)) || {}
             return sendJson(res, 200, addImage(body))
           }
           if (sub === '/images/update' && req.method === 'POST') {
-            const body = JSON.parse((await readBody(req)) || '{}')
+            const body = (await readBody(req)) || {}
             return sendJson(res, 200, updateImage(String(body.id || ''), body))
           }
           if (sub === '/images/delete' && req.method === 'POST') {
-            const body = JSON.parse((await readBody(req)) || '{}')
+            const body = (await readBody(req)) || {}
             return sendJson(res, 200, removeImage(String(body.id || '')))
           }
           if (sub === '/images/upload-test' && req.method === 'POST') {
-            const body = JSON.parse((await readBody(req)) || '{}')
+            const body = (await readBody(req)) || {}
             const it = imageFile(String(body.id || ''))
             if (!it) return sendJson(res, 404, { ok: false, error: '没有这张图' })
             try {
@@ -385,14 +385,14 @@ export function apply(ctx, config = {}) {
             return sendJson(res, 200, { ok: true, filename: `persona-v${p.version}.txt`, content: toText(p, { core: CORE }) })
           }
           if (sub === '/persona/rollback' && req.method === 'POST') {
-            const body = JSON.parse((await readBody(req)) || '{}')
+            const body = (await readBody(req)) || {}
             return sendJson(res, 200, rollback(Number(body.version), { reason: `rollback v${body.version}` }))
           }
           if (sub === '/persona/proposals' && req.method === 'GET') {
             return sendJson(res, 200, { ok: true, proposals: readProposals() })
           }
           if (sub === '/persona/apply' && req.method === 'POST') {
-            const body = JSON.parse((await readBody(req)) || '{}')
+            const body = (await readBody(req)) || {}
             const p = getProposal(String(body.id || ''))
             if (!p) return sendJson(res, 404, { ok: false, error: '没有这条建议' })
             const cfg = cfgOf()
@@ -412,7 +412,7 @@ export function apply(ctx, config = {}) {
             return sendJson(res, 200, { ok: true, samples: merged })
           }
           if (sub === '/persona/dismiss' && req.method === 'POST') {
-            const body = JSON.parse((await readBody(req)) || '{}')
+            const body = (await readBody(req)) || {}
             return sendJson(res, 200, setStatus(String(body.id || ''), 'dismissed'))
           }
           if (sub === '/integrations' && req.method === 'GET') {

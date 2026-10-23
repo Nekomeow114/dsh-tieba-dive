@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.15.3 — 2026-10-23
+
+- 修复图片上传 `"[object Object]" is not valid JSON`：`readBody` 已返回对象，
+  10 个接口却又包了一层 `JSON.parse`。全部去掉。
+- 新增真实路由测试：直接调 `POST /images` 上传 1×1 PNG，再 `GET /images` 确认能读到。
+
 ## 1.15.2 — 2026-10-23
 
 - 修复图片上传 `Failed to fetch`：`readBody` 原来超过 1MB 字符就断开连接，图片 data URL 必然超。
