@@ -247,43 +247,6 @@ window.__ModuleLoader__.load({
       }
       @keyframes tb-pulse { 50% { opacity: 0.25; } }
 
-      /* ── 快捷分组导航栏 ── */
-      .tb-nav {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-bottom: 14px;
-        padding: 6px 10px;
-        background: #fff;
-        border: 1px solid var(--tb-border);
-        border-radius: 10px;
-        box-shadow: var(--tb-shadow);
-      }
-      .tb-nav-links {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        flex-wrap: wrap;
-      }
-      .tb-nav-pill {
-        border: 1px solid transparent;
-        background: transparent;
-        color: var(--tb-text-sec);
-        font-size: 12px;
-        font-weight: 600;
-        padding: 4px 9px;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 0.15s ease;
-      }
-      .tb-nav-pill:hover {
-        background: var(--tb-primary-soft);
-        border-color: var(--tb-primary-border);
-        color: var(--tb-primary);
-      }
-
       /* ── 首次引导与告警框 ── */
       .tb-onboard {
         background: linear-gradient(135deg, #f8fbff 0%, #eff6ff 100%);
@@ -898,7 +861,6 @@ window.__ModuleLoader__.load({
 
     const Group = ({ id, title, summary, open, children }) => h('details', { id: 'tb-group-' + id, className: 'tb-group', open: !!open }, [
       h('summary', { key: 's', className: 'tb-group-sum' }, [
-        h('span', { key: 'i', className: 'tb-group-id' }, id),
         h('span', { key: 't', className: 'tb-group-title' }, title),
         h('span', { key: 'r', className: 'tb-group-sum-right' }, [
           summary ? h('span', { key: 'm', className: 'tb-tag' }, summary) : null,
@@ -1273,21 +1235,6 @@ window.__ModuleLoader__.load({
             : null,
         ]),
 
-        // ── 快捷分组导航栏 ──
-        h('div', { key: 'nav', className: 'tb-nav' }, [
-          h('div', { key: 'links', className: 'tb-nav-links' }, [
-            h('button', { key: 'na', className: 'tb-nav-pill', onClick: () => jumpToGroup('A') }, 'A · 账号与刷帖'),
-            h('button', { key: 'nb', className: 'tb-nav-pill', onClick: () => jumpToGroup('B') }, 'B · 人设与表达'),
-            h('button', { key: 'nc', className: 'tb-nav-pill', onClick: () => jumpToGroup('C') }, 'C · 行为与规则'),
-            h('button', { key: 'nd', className: 'tb-nav-pill', onClick: () => jumpToGroup('D') },
-              'D · 成长与记录' + (pendingProposals.length ? ` (${pendingProposals.length})` : '')),
-          ]),
-          h('div', { key: 'exp', className: 'tb-nav-links' }, [
-            h('button', { key: 'ea', className: 'tb-nav-pill', onClick: () => jumpToGroup('', true) }, '展开全部'),
-            h('button', { key: 'ec', className: 'tb-nav-pill', onClick: () => jumpToGroup('', false) }, '收起低频'),
-          ]),
-        ]),
-
         // ── 启动检查：curl 缺了会全线失败 ──
         (status && status.curl && status.curl.ok === false) ? h('div', { key: 'nocurl', className: 'tb-warn danger' },
           '⚠️ 机器上没有 curl —— 所有贴吧请求都会失败。先装 curl（Linux/macOS 一般自带，Windows 10+ 也自带），再重启 DSH。') : null,
@@ -1487,13 +1434,11 @@ window.__ModuleLoader__.load({
                 persona ? ('当前版本 v' + persona.version + ' · 核心层已锁定') : '读取人设版本中…'),
             ]),
 
-            // 声音画像与句法特征子面板
+            // 语气词与句式（可手改）
             persona ? h('div', { key: 'voice', className: 'tb-subcard', style: { marginTop: 0, marginBottom: 12 } }, [
               h('div', { key: 'l', className: 'tb-subcard-title' }, [
-                h('span', { key: 'a' }, '🎙️ 声音画像（自动统计自语气样本）'),
-                h('span', { key: 'b', className: 'tb-kv' }, '具体像哪个吧由语料浸泡决定'),
+                h('span', { key: 'a' }, '✍️ 语气词与句式（可手改）'),
               ]),
-              h('pre', { key: 'p', className: 'tb-pre light', style: { marginTop: 0, marginBottom: 10 } }, profile || '（还没有）'),
               h('div', { key: 'g', className: 'tb-grid-2' }, [
                 h('div', { key: 'g1' }, [
                   h('div', { key: 'pl', className: 'tb-label', style: { marginTop: 0 } }, '常用语气词（顿号/逗号分隔）'),
