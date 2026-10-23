@@ -142,6 +142,21 @@ ok(evo2.readEvolutionState().paused === false, '保险：恢复生效')
   evo2.resumeEvolution()
 }
 
+// 11.603 懒加载图片解析
+{
+  const t = await import('../lib/tieba.js')
+  const html = `<div class="content" lz="0">看图<span class="wrap pbimgwapper"><div data-url='http://tiebapic.baidu.com/forum/w%3D250/x.jpg?src=http%3A%2F%2Ftiebapic.baidu.com%2Fforum%2Fpic%2Fitem%2Fabc.jpg'></div></span></div>`
+  const r = t.parseThread(html)
+  ok(r.imageCount === 1 && r.images[0].includes('abc.jpg'), '解析：懒加载 data-url 也能认出来', JSON.stringify(r.images))
+}
+
+// 11.604 发帖表单构造
+{
+  const t = await import('../lib/tieba.js')
+  const f = t.buildThreadFields({ kw: '要你命3000', fid: '1071205', tbs: 'T', title: '标题', content: '正文内容内容' })
+  ok(f.kw === '要你命3000' && f.fid === '1071205' && f.__type__ === 'thread' && f.rich_text === '1', '发帖：字段齐全')
+}
+
 // 11.605 带图回帖表单构造
 {
   const t = await import('../lib/tieba.js')

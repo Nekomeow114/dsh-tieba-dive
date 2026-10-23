@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.16.0 (wip) — 2026-10-23
+
+- **发帖**：`tieba_new_thread`（默认关，每天上限），`/f/commit/thread/add`。
+- **图片回帖验证通过**：`/mo/q/apubpost` + `upload_img_info` 真能把图发出去；
+  贴吧是懒加载，图片在 `data-url` 里，解析器已支持。
+- 实机测试：要你命3000 吧，带图回复 `tid 4417758954`，图片成功上墙。
+
 ## 1.15.3 — 2026-10-23
 
 - 修复图片上传 `"[object Object]" is not valid JSON`：`readBody` 已返回对象，

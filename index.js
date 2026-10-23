@@ -958,6 +958,39 @@ export function apply(ctx, config = {}) {
   })
 
   tool({
+    name: 'tieba_new_thread',
+    description: '发一个新帖（只发文字）。必须 confirm: true；默认关，每天有上限。',
+    parameters: {
+      kw: { type: 'string', required: true, description: '吧名' },
+      title: { type: 'string', required: true, description: '标题（4~30 字）' },
+      content: { type: 'string', required: true, description: '正文（10~2000 字）' },
+      confirm: { type: 'boolean', required: true, description: '必须显式传 true' },
+    },
+    execute: async (args) => {
+      if (args.confirm !== true) return json({ ok: false, error: '没确认：要发新帖得传 confirm: true' })
+      const cfg = cfgOf()
+      if (!cfg.allowNewThread) return json({ ok: false, error: '发帖是关着的（设置页可以打开）' })
+      if (!tieba.hasCookie()) return json({ ok: false, error: '还没贴 BDUSS' })
+      const guard = checkOutbound(args.content)
+      if (!guard.ok) return json({ ok: false, error: `正文里有不该发的东西（${guard.hits.join('、')}）` })
+      const st = freshState()
+      const nt = st.newThreads || { date: '', count: 0 }
+      const used = nt.date === today() ? nt.count : 0
+      if (used >= cfg.newThreadPerDay) return json({ ok: false, error: `今天发帖额度用完了（${cfg.newThreadPerDay} 个）` })
+      try {
+        const r = await tieba.createThread({ kw: String(args.kw), title: String(args.title), content: String(args.content) })
+        if (r.ok) {
+          st.newThreads = { date: today(), count: used + 1 }
+          writeState(st)
+          audit({ kind: 'new_thread', kw: args.kw, tid: r.tid, title: args.title, result: r })
+          try { emitEvent('tieba.new_thread', { kw: args.kw, tid: r.tid }) } catch { /* ignore */ }
+        }
+        return json(r)
+      } catch (e) { return json({ ok: false, error: e.message }) }
+    },
+  })
+
+  tool({
     name: 'tieba_reply',
     description: '在一个帖子里回一条。⚠️ 公开内容、用用户的号 —— 必须 confirm: true；'
       + '受「每天 N 条 / 间隔 M 秒 / 同帖一天一次」三道闸限制，且默认配置里是关的。',

@@ -631,6 +631,13 @@ window.__ModuleLoader__.load({
               h('input', { key: 'f', className: 'tb-num', type: 'number', ...num('replyPerDay') }),
               h('span', { key: 'g', className: 'tb-kv' }, '条'),
             ]),
+            h(Sw, { key: 'nt', on: c.allowNewThread === true, onChange: (v) => save({ allowNewThread: v }),
+              text: '允许 AI 发新帖（默认关；只发文字）' }),
+            h('div', { key: 'ntq', className: 'tb-row' }, [
+              h('span', { key: 'a', className: 'tb-kv' }, '每天最多'),
+              h('input', { key: 'b', className: 'tb-num', type: 'number', ...num('newThreadPerDay') }),
+              h('span', { key: 'c', className: 'tb-kv' }, '帖'),
+            ]),
             h(Sw, { key: 'img', on: c.allowImages === true, onChange: (v) => save({ allowImages: v }),
               text: '允许 AI 发图（默认关；上传失败会降级为纯文字）' }),
             h('div', { key: 'imgq', className: 'tb-row' }, [
