@@ -930,9 +930,8 @@ window.__ModuleLoader__.load({
 
       const loadEvo = React.useCallback(async () => {
         try {
-          const [ev, st, tl] = await Promise.all([
+          const [ev, tl] = await Promise.all([
             jget('/evolution/state').catch(() => null),
-            jget('/style/state').catch(() => null),
             jget('/timeline?n=12').catch(() => null),
           ])
           if (ev) setEvoState(ev)
