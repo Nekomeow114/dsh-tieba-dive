@@ -29,6 +29,7 @@ import { readProposals, addProposal, getProposal, setStatus, mergeSamples, appen
 import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS, getVersion } from './lib/persona.mjs'
 import { applyEvolution, canEvolveToday, readEvolutionState, driftReport, pauseEvolution, resumeEvolution } from './lib/evolution.mjs'
 import { toText, toJson } from './lib/persona-export.mjs'
+import { listImages, addImage, updateImage, removeImage, publicView, usableImages, pickImage, markUsed, imageFile } from './lib/images.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -333,6 +334,36 @@ export function apply(ctx, config = {}) {
           }
           if (sub === '/persona/versions' && req.method === 'GET') {
             return sendJson(res, 200, { ok: true, versions: listVersions(), current: ensurePersona(cfgOf().styleSamples).version })
+          }
+          if (sub === '/images' && req.method === 'GET') {
+            return sendJson(res, 200, {
+              ok: true,
+              images: listImages().map((it) => ({ ...publicView(it), fileUrl: '/api/tieba-duty/images/raw?id=' + it.id, needsDesc: !!it.needsDesc })),
+              max: 50,
+            })
+          }
+          if (sub === '/images' && req.method === 'POST') {
+            const body = JSON.parse((await readBody(req)) || '{}')
+            return sendJson(res, 200, addImage(body))
+          }
+          if (sub === '/images/update' && req.method === 'POST') {
+            const body = JSON.parse((await readBody(req)) || '{}')
+            return sendJson(res, 200, updateImage(String(body.id || ''), body))
+          }
+          if (sub === '/images/delete' && req.method === 'POST') {
+            const body = JSON.parse((await readBody(req)) || '{}')
+            return sendJson(res, 200, removeImage(String(body.id || '')))
+          }
+          if (sub === '/images/raw' && req.method === 'GET') {
+            const u = new URL(req.url, 'http://127.0.0.1')
+            const it = imageFile(String(u.searchParams.get('id') || ''))
+            if (!it) return sendJson(res, 404, { ok: false, error: '没有这张图' })
+            try {
+              const buf = fs.readFileSync(it.abs)
+              const ext = path.extname(it.file).slice(1)
+              res.writeHead(200, { 'content-type': ext === 'jpg' ? 'image/jpeg' : `image/${ext}`, 'cache-control': 'no-store' })
+              return res.end(buf)
+            } catch { return sendJson(res, 500, { ok: false, error: '图片文件读不到' }) }
           }
           if (sub === '/persona/export' && req.method === 'GET') {
             const u = new URL(req.url, 'http://127.0.0.1')
@@ -686,6 +717,24 @@ export function apply(ctx, config = {}) {
   })
 
   tool({
+    name: 'tieba_image_list',
+    description: '看图片库里能用的图（ID + 描述 + 标签）。看不到图片文件，也拿不到路径。',
+    parameters: { kw: { type: 'string', description: '按吧过滤（可省）' } },
+    execute: async (args) => json({ ok: true, images: usableImages(String((args && args.kw) || '')) }),
+  })
+
+  tool({
+    name: 'tieba_image_meta',
+    description: '给图片补描述/标签（上传时没填描述才会用到）。',
+    parameters: {
+      id: { type: 'string', required: true, description: '图片 ID' },
+      desc: { type: 'string', description: '一句话描述' },
+      tags: { type: 'array', items: { type: 'string' }, description: '适用场景标签' },
+    },
+    execute: async (args) => json(updateImage(String(args.id), { desc: args.desc, tags: args.tags })),
+  })
+
+  tool({
     name: 'tieba_evolve_apply',
     description: '把这一轮从吧里学到的变化应用到人设：1~3 句样本 + 可选 1 个旋钮 ±1。每天最多一次，会自动写公开/私人日记。',
     parameters: {
@@ -899,6 +948,7 @@ export function apply(ctx, config = {}) {
       intent: { type: 'string', description: 'answer=解答疑问 / chat=接话 / share=分享看法 / joke=玩梗；默认 chat' },
       mention: { type: 'string', description: '要在回复里 @ 谁（贴吧昵称）；不传就用配置里的，空着就不 @' },
       confirm: { type: 'boolean', description: '必须显式传 true：表示用户已同意发出去' },
+      imageId: { type: 'string', description: '可选：要一起发的图片 ID（库外 ID 当不发图）' },
     },
     execute: async (args) => {
       if (args.confirm !== true) return json({ ok: false, error: '没确认：要发公开回复得传 confirm: true' })
@@ -938,6 +988,22 @@ export function apply(ctx, config = {}) {
       const who = String(args.mention || (cfg.mentionEvery ? cfg.mention : '') || '').trim()
       let body = String(args.content || '').trim()
       if (who && !body.includes('@' + who)) body = body + ' @' + who + ' '
+      // 可选发图：只认库内 ID；受限就降级为纯文字（不重试）
+      let imageInfo = null
+      const wantImage = args.imageId ? String(args.imageId) : ''
+      if (wantImage) {
+        if (!cfg.allowImages) imageInfo = { id: wantImage, sent: false, note: '发图开关关着，只发文字' }
+        else {
+          const pick = pickImage({ id: wantImage, kw: String(args.kw), state: st, cfg })
+          if (!pick.ok) imageInfo = { id: wantImage, sent: false, note: pick.error }
+          else {
+            // ⚠️ 贴吧图片上传接口没有验证过：按规格「上传失败降级为只发文字」，不重试
+            imageInfo = { id: wantImage, sent: false, note: '图片上传接口未验证，降级只发文字' }
+            log(`发图失败（${wantImage}）：上传接口未验证，降级只发文字`)
+            try { emitEvent('tieba.image.fallback', { id: wantImage, tid: args.tid }) } catch { /* ignore */ }
+          }
+        }
+      }
       const r = await tieba.reply({ kw: String(args.kw), tid: String(args.tid), content: body })
       if (r.ok) {
         st.replies += 1
@@ -950,7 +1016,7 @@ export function apply(ctx, config = {}) {
         audit({ kind: 'reply', kw: args.kw, tid: args.tid, intent, mention: who, content: body, result: r })
         try { emitEvent('tieba.reply', { kw: args.kw, tid: args.tid, intent, chars: body.length }) } catch { /* ignore */ }
       }
-      return json(r)
+      return json(imageInfo ? { ...r, image: imageInfo } : r)
     },
   })
 

@@ -142,6 +142,24 @@ ok(evo2.readEvolutionState().paused === false, '保险：恢复生效')
   evo2.resumeEvolution()
 }
 
+// 11.62 图片库
+const img = await import('../lib/images.mjs')
+const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+const a1 = img.addImage({ name: 't.png', dataUrl: PNG, desc: '测试图', tags: ['贴贴'] })
+ok(a1.ok && a1.image.id, '图片：上传成功', a1.error || '')
+ok(!('file' in a1.image) && !('abs' in a1.image), '图片：给模型的视图不含路径')
+const iid = a1.image.id
+const stImg = { imagesToday: { count: 0, byId: {} }, round: null }
+const cfgImg = { imagePerDay: 2 }
+ok(img.pickImage({ id: iid, kw: 'deepseek', state: stImg, cfg: cfgImg }).ok, '图片：正常可选')
+img.updateImage(iid, { disabledBars: ['deepseek'] })
+ok(!img.pickImage({ id: iid, kw: 'deepseek', state: stImg, cfg: cfgImg }).ok, '图片：该吧禁用时不发')
+img.updateImage(iid, { disabledBars: [] })
+img.markUsed(iid)
+ok(!img.pickImage({ id: iid, kw: 'deepseek', state: stImg, cfg: cfgImg }).ok, '图片：24 小时冷却')
+ok(!img.pickImage({ id: iid + 'x', kw: 'deepseek', state: stImg, cfg: cfgImg }).ok, '图片：库外 ID 拒绝')
+ok(!img.pickImage({ id: iid, kw: 'deepseek', state: { ...stImg, round: { images: 1 } }, cfg: cfgImg }).ok, '图片：每轮最多 1 张')
+
 // 11.63 人设导出
 const ex = await import('../lib/persona-export.mjs')
 const samplePersona = { version: 7, traits: { abstract: 3, sharp: 2, gentle: 8, talkative: 4, imageBias: 2 }, voice: { samples: ['正常一句', '看 https://example.com'], quirks: [], sentenceLen: 'short', punctuation: 'light' } }

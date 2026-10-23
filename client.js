@@ -155,6 +155,25 @@ window.__ModuleLoader__.load({
         try { const r = await jget('/persona/versions'); setVersions(r.versions || []) } catch { /* ignore */ }
       }, [])
       React.useEffect(() => { loadVersions() }, [loadVersions])
+      const loadImages = React.useCallback(async () => {
+        try { const r = await jget('/images'); setImages(r.images || []) } catch { /* ignore */ }
+      }, [])
+      React.useEffect(() => { loadImages() }, [loadImages])
+      const uploadImage = async (file) => {
+        if (!file) return
+        if (file.size > 2 * 1024 * 1024) { setMsg({ ok: false, text: '单张不能超过 2MB' }); return }
+        setBusy(true)
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const rd = new FileReader(); rd.onload = () => resolve(String(rd.result || '')); rd.onerror = reject; rd.readAsDataURL(file)
+          })
+          const desc = window.prompt('给这张图写一句话描述（留空 = 待补）', '') || ''
+          const tags = (window.prompt('适用场景标签（逗号分隔，可留空）', '') || '').split(/[，,]/).map((x) => x.trim()).filter(Boolean)
+          const r = await jpost('/images', { name: file.name, dataUrl, desc, tags })
+          if (!r.ok) throw new Error(r.error || '上传失败')
+          await loadImages(); setMsg({ ok: true, text: '已加入图片库' })
+        } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+      }
       const download = (name, content, type) => {
         const blob = new Blob([content], { type: type || 'text/plain;charset=utf-8' })
         const a = document.createElement('a')
@@ -521,12 +540,50 @@ window.__ModuleLoader__.load({
           ]),
         ]),
 
-        // ── B2 图片库（待实现）──
+        // ── B2 图片库 ──
         h('div', { key: 'images', className: 'tb-card' }, [
           h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, 'B2 图片库'),
-          h('div', { key: 'k', className: 'tb-kv' }, '还没实现。下一步会做成：上传、描述、标签、启用/停用；回帖时可选用（默认关）。'),
+          h('div', { key: 'h', className: 'tb-kv' }, '给模型的只有 ID + 描述 + 标签；发图默认关，上限 50 张、单张 2MB。'),
+          h('div', { key: 'u', className: 'tb-row' }, [
+            h('label', { key: 'l', className: 'tb-btn ghost sm', style: { cursor: 'pointer', margin: 0 } }, [
+              '上传图片',
+              h('input', { key: 'i', type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif', style: { display: 'none' },
+                onChange: (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; uploadImage(f) } }),
+            ]),
+            h('button', { key: 'r', className: 'tb-btn ghost sm', disabled: busy, onClick: loadImages }, '刷新'),
+          ]),
+          images.length ? h('div', { key: 'grid', style: { display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 8 } },
+            images.map((im) => h('div', { key: im.id, style: { width: 140, border: '1px solid #e2eaf5', borderRadius: 10, padding: 8 } }, [
+              h('img', { key: 'p', src: im.fileUrl, alt: im.desc, style: { width: '100%', height: 90, objectFit: 'cover', borderRadius: 8, opacity: im.enabled === false ? 0.4 : 1 } }),
+              h('div', { key: 'd', className: 'tb-kv', style: { marginTop: 4, lineHeight: 1.4 } }, im.desc + (im.needsDesc ? '（待补描述）' : '')),
+              im.tags && im.tags.length ? h('div', { key: 'g', className: 'tb-kv' }, im.tags.join(' · ')) : null,
+              h('div', { key: 's', className: 'tb-kv' }, '用过 ' + (im.uses || 0) + ' 次'),
+              h('div', { key: 'a', className: 'tb-row', style: { marginTop: 4 } }, [
+                h('button', { key: 'e', className: 'tb-btn ghost sm', disabled: busy,
+                  onClick: async () => {
+                    const desc = window.prompt('修改描述', im.desc)
+                    if (desc == null) return
+                    setBusy(true)
+                    try { await jpost('/images/update', { id: im.id, desc }); await loadImages() }
+                    catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+                  } }, '编辑'),
+                h('button', { key: 't', className: 'tb-btn ghost sm', disabled: busy,
+                  onClick: async () => {
+                    setBusy(true)
+                    try { await jpost('/images/update', { id: im.id, enabled: im.enabled === false }); await loadImages() }
+                    catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+                  } }, im.enabled === false ? '启用' : '停用'),
+                h('button', { key: 'x', className: 'tb-btn ghost sm', disabled: busy,
+                  onClick: async () => {
+                    if (!window.confirm('删除这张图？')) return
+                    setBusy(true)
+                    try { await jpost('/images/delete', { id: im.id }); await loadImages() }
+                    catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+                  } }, '删除'),
+              ]),
+            ])))
+            : h('div', { key: 'none', className: 'tb-kv' }, '还没有图片。'),
         ]),
-
         ]),
 
         h(Group, { key: 'C', id: 'C', title: '行为与规则',
@@ -549,6 +606,13 @@ window.__ModuleLoader__.load({
               h('span', { key: 'e', className: 'tb-kv' }, '秒 · 全天合计'),
               h('input', { key: 'f', className: 'tb-num', type: 'number', ...num('replyPerDay') }),
               h('span', { key: 'g', className: 'tb-kv' }, '条'),
+            ]),
+            h(Sw, { key: 'img', on: c.allowImages === true, onChange: (v) => save({ allowImages: v }),
+              text: '允许 AI 发图（默认关；上传失败会降级为纯文字）' }),
+            h('div', { key: 'imgq', className: 'tb-row' }, [
+              h('span', { key: 'a', className: 'tb-kv' }, '每天最多'),
+              h('input', { key: 'b', className: 'tb-num', type: 'number', ...num('imagePerDay') }),
+              h('span', { key: 'c', className: 'tb-kv' }, '张（每轮 1 张 · 同图 24 小时冷却）'),
             ]),
             h('div', { key: 'h', className: 'tb-kv' },
               '现状：一轮最多 ' + (c.replyPerRound ?? 1) + ' 条，全天最多 ' + (c.replyPerDay ?? 3) + ' 条'
