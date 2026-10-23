@@ -1028,7 +1028,7 @@ export function apply(ctx, config = {}) {
       let soaked = null
       try {
         const p0 = ensurePersona(cfgOf().styleSamples)
-        const eff = soakEffect(ob.style, p0)
+        const eff = cfgOf().allowSoak === true ? soakEffect(ob.style, p0) : null
         if (eff) {
           const drift = driftReport()
           if (drift.level === 'high') {
