@@ -324,7 +324,7 @@ export function apply(ctx, config = {}) {
           }
           if (sub === '/persona/state' && req.method === 'GET') {
             const p = ensurePersona(cfgOf().styleSamples)
-            return sendJson(res, 200, { ok: true, persona: p, core: CORE, labels: TRAIT_LABELS, keys: TRAIT_KEYS, prompt: renderForPrompt(p) })
+            return sendJson(res, 200, { ok: true, persona: p, core: CORE, labels: TRAIT_LABELS, keys: TRAIT_KEYS, profile: voiceProfile(p), prompt: renderForPrompt(p) })
           }
           if (sub === '/persona/traits' && req.method === 'POST') {
             const body = (await readBody(req)) || {}
@@ -333,7 +333,12 @@ export function apply(ctx, config = {}) {
           }
           if (sub === '/persona/voice' && req.method === 'POST') {
             const body = (await readBody(req)) || {}
-            try { return sendJson(res, 200, { ok: true, persona: updatePersona({ voice: { samples: body.samples || [] } }, { reason: String(body.reason || 'ui') }) }) }
+            try {
+              const patch = { samples: body.samples || [] }
+              if (Array.isArray(body.particles)) patch.particles = body.particles
+              if (Array.isArray(body.patterns)) patch.patterns = body.patterns
+              return sendJson(res, 200, { ok: true, persona: updatePersona({ voice: patch }, { reason: String(body.reason || 'ui') }) })
+            }
             catch (e) { return sendJson(res, 500, { ok: false, error: e.message }) }
           }
           if (sub === '/persona/versions' && req.method === 'GET') {

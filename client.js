@@ -129,6 +129,7 @@ window.__ModuleLoader__.load({
       const [health, setHealth] = React.useState(null)
       const [proposals, setProposals] = React.useState([])
       const [persona, setPersona] = React.useState(null)
+      const [profile, setProfile] = React.useState('')
       const [evoState, setEvoState] = React.useState(null)
       const [versions, setVersions] = React.useState([])
       const [images, setImages] = React.useState([])
@@ -152,7 +153,7 @@ window.__ModuleLoader__.load({
       }, [])
       React.useEffect(() => { loadProposals() }, [loadProposals])
       const loadPersona = React.useCallback(async () => {
-        try { const r = await jget('/persona/state'); setPersona(r.persona) } catch { /* ignore */ }
+        try { const r = await jget('/persona/state'); setPersona(r.persona); setProfile(r.profile || '') } catch { /* ignore */ }
       }, [])
       React.useEffect(() => { loadPersona() }, [loadPersona])
       const loadVersions = React.useCallback(async () => {
@@ -502,24 +503,20 @@ window.__ModuleLoader__.load({
           h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, 'B1 人设'),
           h('div', { key: 'pv', className: 'tb-kv', style: { marginBottom: 8 } },
             persona ? ('当前版本 v' + persona.version + ' · 核心层（名字/自称/底线）已锁死，不可改') : '读取人设版本中…'),
-          persona ? h('div', { key: 'traits' }, [
-            h('div', { key: 'l', className: 'tb-label' }, '性格旋钮（0~10）'),
-            ...([['abstract','抽象度'],['sharp','毒舌度'],['gentle','温柔度'],['talkative','话痨度'],['imageBias','发图倾向']].map(([k, label]) =>
-              h('div', { key: k, className: 'tb-row' }, [
-                h('span', { key: 'a', className: 'tb-kv', style: { minWidth: 76 } }, label),
-                h('input', { key: 'b', type: 'range', min: 0, max: 10, value: persona.traits[k],
-                  style: { flex: 1 },
-                  onChange: (e) => setPersona({ ...persona, traits: { ...persona.traits, [k]: Number(e.target.value) } }) }),
-                h('span', { key: 'c', className: 'tb-num', style: { textAlign: 'center' } }, String(persona.traits[k])),
-              ]))),
-            h('div', { key: 'r', className: 'tb-row' }, [
-              h('button', { key: 'b', className: 'tb-btn ghost sm', disabled: busy,
-                onClick: async () => {
-                  setBusy(true)
-                  try { const r = await jpost('/persona/traits', { traits: persona.traits, reason: 'ui' }); setPersona(r.persona); setMsg({ ok: true, text: '旋钮已保存（v' + r.persona.version + '）' }) }
-                  catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
-                } }, '保存旋钮'),
-            ]),
+          persona ? h('div', { key: 'voice' }, [
+            h('div', { key: 'l', className: 'tb-label' }, '声音画像'),
+            h('pre', { key: 'p', className: 'tb-pre' }, profile || '（还没有）'),
+            h('div', { key: 'pl', className: 'tb-label' }, '常用语气词（顿号/逗号分隔）'),
+            h('input', { key: 'pi', className: 'tb-in',
+              placeholder: '例：哈？ / 行吧 / 乐 / 咕噜',
+              value: (persona.voice.particles || []).join('、'),
+              onChange: (e) => setPersona({ ...persona, voice: { ...persona.voice, particles: e.target.value.split(/[、,，]/).map((x) => x.trim()).filter(Boolean) } }) }),
+            h('div', { key: 'ql', className: 'tb-label' }, '常用句式（顿号/逗号分隔）'),
+            h('input', { key: 'qi', className: 'tb-in',
+              placeholder: '例：反问 / 先接后转 / 一句一停',
+              value: (persona.voice.patterns || []).join('、'),
+              onChange: (e) => setPersona({ ...persona, voice: { ...persona.voice, patterns: e.target.value.split(/[、,，]/).map((x) => x.trim()).filter(Boolean) } }) }),
+            h('div', { key: 'hint', className: 'tb-kv' }, '这些是「怎么说」；具体像哪个吧，由 D1 的语料浸泡决定，不靠滑条。'),
           ]) : null,
           h('textarea', {
             key: 'p', className: 'tb-ta', style: { minHeight: 92 },
@@ -549,8 +546,10 @@ window.__ModuleLoader__.load({
                 setBusy(true)
                 try {
                   const samples = (persona ? persona.voice.samples : String(c.styleSamples || '').split('\n')).map((x) => x.trim()).filter(Boolean)
-                  const r = await jpost('/persona/voice', { samples, reason: 'ui' })
-                  setPersona(r.persona); setMsg({ ok: true, text: '语气样本已保存（v' + r.persona.version + '）' })
+                  const particles = persona ? (persona.voice.particles || []) : []
+                  const patterns = persona ? (persona.voice.patterns || []) : []
+                  const r = await jpost('/persona/voice', { samples, particles, patterns, reason: 'ui' })
+                  setPersona(r.persona); setProfile((await jget('/persona/state')).profile || ''); setMsg({ ok: true, text: '声音设置已保存（v' + r.persona.version + '）' })
                 } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
               } }, '保存语气样本'),
             h('span', { key: 'k', className: 'tb-kv' }, '模型回帖前会读这几句，照着学长短和口气'),

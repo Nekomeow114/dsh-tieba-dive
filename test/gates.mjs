@@ -104,6 +104,10 @@ ok(per.listVersions().length >= 1, '人设：有历史快照')
 const rb = per.rollback(p1.version)
 ok(rb.ok && rb.persona.version > p2.version, '人设：回滚生成新版本')
 ok(per.renderForPrompt(rb.persona).includes('核心层'), '人设：提示词包含核心层')
+const pv = per.updatePersona({ voice: { samples: ['行吧'], particles: ['哈？', '乐'], patterns: ['反问'] } }, { reason: 'test-voice' })
+ok(pv.voice.particles.length === 2 && pv.voice.patterns[0] === '反问', '人设：语气词/句式可保存')
+ok(per.voiceProfile(pv).includes('语气词') && per.voiceProfile(pv).includes('反问'), '人设：声音画像能读出来')
+ok(per.renderForPrompt(pv).includes('常用语气词'), '人设：提示词带语气词')
 
 // 11.6 自动演化（每天一次、小步、双日记）
 const evo2 = await import('../lib/evolution.mjs')
