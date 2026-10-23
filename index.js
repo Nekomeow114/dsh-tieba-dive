@@ -24,6 +24,7 @@ import { roundAlive } from './lib/round-state.mjs'
 import { isValley, nextValley, peakLabel, currentWindow } from './lib/peak.mjs'
 import { localStamp } from './lib/time.mjs'
 import { checkOutbound } from './lib/guard.mjs'
+import { readProposals, addProposal, getProposal, setStatus, mergeSamples, appendEvolutionNote } from './lib/evolve.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -305,6 +306,32 @@ export function apply(ctx, config = {}) {
             tieba.clearCooldown()
             return sendJson(res, 200, { ok: true })
           }
+          if (sub === '/persona/proposals' && req.method === 'GET') {
+            return sendJson(res, 200, { ok: true, proposals: readProposals() })
+          }
+          if (sub === '/persona/apply' && req.method === 'POST') {
+            const body = JSON.parse((await readBody(req)) || '{}')
+            const p = getProposal(String(body.id || ''))
+            if (!p) return sendJson(res, 404, { ok: false, error: '没有这条建议' })
+            const cfg = cfgOf()
+            const merged = mergeSamples(String(cfg.styleSamples || '').split('\n'), p.samples)
+            writeConfig({ ...cfg, styleSamples: merged.join('\n') })
+            // 人设文件里也留一笔（只追加）
+            try {
+              const pf = String(cfg.personaFile || '').trim()
+              if (pf) {
+                const abs = path.isAbsolute(pf) ? pf : path.join(tieba.homeDir(), pf)
+                const old = fs.readFileSync(abs, 'utf8')
+                fs.writeFileSync(abs, appendEvolutionNote(old, p.samples), 'utf8')
+              }
+            } catch { /* 文件不在就只改样本 */ }
+            setStatus(p.id, 'applied')
+            return sendJson(res, 200, { ok: true, samples: merged })
+          }
+          if (sub === '/persona/dismiss' && req.method === 'POST') {
+            const body = JSON.parse((await readBody(req)) || '{}')
+            return sendJson(res, 200, setStatus(String(body.id || ''), 'dismissed'))
+          }
           if (sub === '/integrations' && req.method === 'GET') {
             return sendJson(res, 200, { ok: true, plugins: readManifests(), caps: { memory: hasCapabilitySafe('memory') } })
           }
@@ -540,6 +567,21 @@ export function apply(ctx, config = {}) {
         headless: checkHeadless(cfg),
         lastError,
       })
+    },
+  })
+
+  tool({
+    name: 'tieba_evolve_propose',
+    description: '把这一轮从吧里学到的「说话方式」提给主人：1~3 句语气样本。不会直接改人设，主人采纳后才生效。',
+    parameters: {
+      samples: { type: 'array', items: { type: 'string' }, required: true, description: '1~3 句短样本（每句 3~40 字）' },
+      note: { type: 'string', description: '一句说明：这几句是从哪种语境里学的' },
+      source: { type: 'string', description: '来源：吧名 / 帖子 id（可省）' },
+    },
+    execute: async (args) => {
+      const cfg = cfgOf()
+      if (!cfg.evolvePersona) return json({ ok: false, error: '人设演化是关着的（设置页可以打开）' })
+      return json(addProposal({ samples: args.samples, note: args.note, source: args.source }))
     },
   })
 

@@ -82,6 +82,16 @@ console.log(bad ? `\n${bad} 项失败` : '\n全部通过')
 fs.rmSync(tmp, { recursive: true, force: true })
 process.exit(bad ? 1 : 0)
 
+// 11.6 人设演化
+const evo = await import('../lib/evolve.mjs')
+const vs = evo.validateSamples(['哈？这也行', 'x', '看 https://a.b', '这书我也在看', '哈？这也行'])
+ok(vs.length === 2 && vs[0] === '哈？这也行' && vs[1] === '这书我也在看', '演化：过滤太短/链接/重复', JSON.stringify(vs))
+const merged = evo.mergeSamples(['a', 'b'], ['b', 'c'])
+ok(merged.join('|') === 'a|b|c', '演化：合并去重')
+ok(evo.mergeSamples(new Array(40).fill('x').map((_, i) => 's' + i), ['new']).length === evo.MAX_SAMPLES, '演化：样本有上限')
+const withNote = evo.appendEvolutionNote('正文', ['哈？这也行'])
+ok(withNote.includes('正文') && withNote.includes('演化记录') && withNote.includes('哈？这也行'), '演化：只追加不覆盖正文')
+
 // 11.8 出站内容过滤
 const { checkOutbound } = await import('../lib/guard.mjs')
 ok(checkOutbound('这书我也在看，节奏慢但挺上头').ok, '出站：正常文本放行')

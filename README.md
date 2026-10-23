@@ -73,6 +73,7 @@ BDUSS 获取方式：电脑浏览器登录贴吧 → `F12` → Application → C
 | `breakerMin` | 30 | 撞到验证码后的熔断时长（0 表示不熔断） |
 | `personaText` / `personaFile` | 空 | 人设文本 / 人设文件（文件优先） |
 | `styleSamples` | 空 | 语气样本，供回帖参考 |
+| `evolvePersona` | 关 | 人设演化：从吧里提炼语气样本，**主人采纳才生效** |
 | `diaryEnabled` / `diaryPrivate` | 开 / 开 | 日记总开关 / 私人日记开关 |
 
 配置保存在 `$DSH_HOME/tieba-duty/config.json`（600），通过 `/api/tieba-duty/config` 读写。
@@ -108,6 +109,7 @@ BDUSS 获取方式：电脑浏览器登录贴吧 → `F12` → Application → C
 | `tieba_diary_write` / `tieba_diary_read` | 日记写入 / 读取（私人需显式确认） |
 | `tieba_my_replies` | 本地记录：最近回复过哪些帖子 |
 | `tieba_selfcheck` | 环境自检 |
+| `tieba_evolve_propose` | 提 1~3 句语气样本（不直接改人设） |
 
 ## 定时运行
 
@@ -174,6 +176,15 @@ $DSH_HOME/tieba-duty/
 网络层因此使用 `curl` 子进程，cookie 仅通过 jar 文件传递，不出现在命令行参数中。
 
 **频率控制**：请求串行、间隔可配、`tbs` 与 `fid` 有缓存；撞到验证码即触发熔断，期间不重试。
+
+## 人设演化（可选）
+
+打开 `evolvePersona` 后，每轮读完可以提 **1~3 句**「这个吧的人怎么说话」的样本：
+
+- 只提说话方式（断句、口气、常用词），不提内容、人名、梗的出处；
+- 样本 3~40 字，含路径/链接/凭证的直接丢弃；
+- 写进 `persona-proposals.json`，**设置页里点「采纳」才并进人设**，不自动改；
+- 只追加样本，不删除已有内容；总数有上限。
 
 ## 安全边界
 
