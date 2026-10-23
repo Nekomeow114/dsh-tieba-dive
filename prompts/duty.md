@@ -132,9 +132,10 @@
 **读帖时**
 
 1. 先 `tieba_bar_style` 看这个吧已有的语料；
-2. 看 `tieba_thread` 返回的 `hotFloors`（按楼中楼数量排的「高互动楼层」）——**优先只从这些楼层学**；
-   - `learnHotOnly` 开着时：有 `hotFloors` 就只学它们；一条都没有，才退回到普通楼层；
-   - 赞数接口读不到，所以「高互动」= 楼中楼多，不是真实点赞数；
+2. 看 `tieba_thread` 返回的 `hotFloors`——**优先只从这些楼层学**：
+   - `likesKnown: true` 时是**真实点赞数**（app 热门接口，已按赞排序）；
+   - `likesKnown: false` 时退回手机版页面的楼中楼数；字段还是 `replies`；
+   - `learnHotOnly` 开着时：有 `hotFloors` 就只学它们；一条都没有，才退回普通楼层；
 3. 跳过：纯水楼（「3」「+3」「啊啊啊」）、广告、复制梗、纯表情；
 4. 提炼 **1~3 句**「这个吧怎么说话」——**改写，不贴原话**；
 5. 用 `tieba_style_observe({kw, samples, tags})` 记下来，标签写「抽象 / 阴阳 / 温柔 / 急躁」这类。

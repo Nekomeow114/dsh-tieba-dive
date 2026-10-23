@@ -957,6 +957,15 @@ export function apply(ctx, config = {}) {
     execute: async (args) => {
       const tid = String(args.tid)
       const r = await tieba.readThread(tid, { pn: Number(args.pn) || 1 })
+      // 真实热门：app protobuf 接口，带点赞数；失败就用手机版页面的楼中楼数
+      try {
+        const hot = await tieba.hotReplies(tid, { rn: 30 })
+        r.hotFloors = hot.slice(0, 6).map((p) => ({ floor: p.floor, likes: p.likes, replies: p.replies, text: p.text }))
+        r.likesKnown = true
+      } catch (e) {
+        r.likesKnown = false
+        log(`热门回复接口没成（用楼中楼数代替）：${e.message}`)
+      }
       try {
         const st = freshState()
         const seenBefore = Boolean(st.seen[`t:${tid}`])
