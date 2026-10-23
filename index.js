@@ -28,6 +28,7 @@ import { isSameOrigin } from './lib/origin.mjs'
 import { readProposals, addProposal, getProposal, setStatus, mergeSamples, appendEvolutionNote } from './lib/evolve.mjs'
 import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS, getVersion } from './lib/persona.mjs'
 import { applyEvolution, canEvolveToday, readEvolutionState, driftReport, pauseEvolution, resumeEvolution } from './lib/evolution.mjs'
+import { observeBar, getStyle, renderStyle, bestSamplesFor, styleSummary, effectiveTraits, MODES } from './lib/style.mjs'
 import { toText, toJson } from './lib/persona-export.mjs'
 import { listImages, addImage, updateImage, removeImage, publicView, usableImages, pickImage, markUsed, imageFile, biasHint, pendingDescriptions } from './lib/images.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
@@ -303,6 +304,9 @@ export function apply(ctx, config = {}) {
           if (sub === '/cooldown/clear' && req.method === 'POST') {
             tieba.clearCooldown()
             return sendJson(res, 200, { ok: true })
+          }
+          if (sub === '/style/state' && req.method === 'GET') {
+            return sendJson(res, 200, { ok: true, bars: styleSummary() })
           }
           if (sub === '/evolution/state' && req.method === 'GET') {
             const cfg = cfgOf()
@@ -761,6 +765,7 @@ export function apply(ctx, config = {}) {
       samples: { type: 'array', items: { type: 'string' }, required: true, description: '1~3 句、3~40 字；要改写，不要贴吧友原话' },
       traitKey: { type: 'string', description: '要动的旋钮：abstract/sharp/gentle/talkative/imageBias（可省）' },
       traitStep: { type: 'number', description: '方向：1 或 -1，幅度只会取 1' },
+      kw: { type: 'string', description: '当前泡着的吧（可省；给了就优先用这个吧的语料）' },
       reason: { type: 'string', description: '为什么这么改（写进日记与版本历史）' },
       narrative: { type: 'string', description: '公开日记里那段人设口吻的叙述（可省）' },
       stats: { type: 'object', description: '事实字段：bars/postsSeen/postTypes/replies/repliesGot/deleted/images/imageNotes' },
@@ -769,8 +774,10 @@ export function apply(ctx, config = {}) {
       const cfg = cfgOf()
       if (!cfg.evolvePersona) return json({ ok: false, error: '人设演化是关着的' })
       if (!canEvolveToday()) return json({ ok: false, error: '今天已经演化过了（每天最多一次）' })
+      let samples = Array.isArray(args.samples) ? args.samples : []
+      if (!samples.length && args.kw) samples = bestSamplesFor(String(args.kw))
       const r = applyEvolution({
-        samples: args.samples, traitKey: args.traitKey, traitStep: args.traitStep,
+        samples, traitKey: args.traitKey, traitStep: args.traitStep,
         reason: args.reason, narrative: args.narrative, stats: args.stats,
       })
       return json(r.ok ? { ok: true, record: r.record, version: r.persona.version } : r)
@@ -955,6 +962,33 @@ export function apply(ctx, config = {}) {
     description: '签到。不给 kw 就签配置里的所有吧（signAllFollowed 开启时并上全部关注）；一天一次。',
     parameters: { kw: { type: 'string', description: '只签某一个吧（可省）' } },
     execute: async (args) => json({ ok: true, results: await doSign(args.kw) }),
+  })
+
+  tool({
+    name: 'tieba_style_observe',
+    description: '记 1~3 句「这个吧怎么说话」（要改写，不贴原话）。待得越久，回帖越会像这个吧。',
+    parameters: {
+      kw: { type: 'string', required: true, description: '吧名' },
+      samples: { type: 'array', items: { type: 'string' }, required: true, description: '1~3 句、3~40 字' },
+      tags: { type: 'array', items: { type: 'string' }, description: '语气标签：抽象/阴阳/温柔/急躁…' },
+      mode: { type: 'string', description: '环境模式：串子/抽象/阴阳/暴躁/温柔/理性/整活（可省，会从 tags 推）' },
+    },
+    execute: async (args) => {
+      if (!cfgOf().evolvePersona) return json({ ok: false, error: '语料浸泡关着（和演化同一个总开关）' })
+      return json(observeBar({ kw: args.kw, samples: args.samples, tags: args.tags, mode: args.mode }))
+    },
+  })
+
+  tool({
+    name: 'tieba_bar_style',
+    description: '取某个吧的语料：回帖前看它，照着这个吧的说话方式来。',
+    parameters: { kw: { type: 'string', description: '吧名（默认第一个要刷的吧）' } },
+    execute: async (args) => {
+      const kw = String((args && args.kw) || cfgOf().bars[0] || '')
+      const style = getStyle(kw)
+      const traits = effectiveTraits(ensurePersona(cfgOf().styleSamples).traits, style)
+      return json({ ok: true, kw, style, traits, modes: Object.keys(MODES), text: renderStyle(style) })
+    },
   })
 
   tool({

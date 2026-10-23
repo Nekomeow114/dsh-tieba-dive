@@ -132,6 +132,7 @@ window.__ModuleLoader__.load({
       const [evoState, setEvoState] = React.useState(null)
       const [versions, setVersions] = React.useState([])
       const [images, setImages] = React.useState([])
+      const [styleState, setStyleState] = React.useState(null)
 
       const refresh = React.useCallback(async () => {
         try {
@@ -690,7 +691,11 @@ window.__ModuleLoader__.load({
           h('div', { key: 'b', className: 'tb-body' }, [
             h(Sw, { key: 'e', on: c.evolvePersona === true, onChange: (v) => save({ evolvePersona: v }),
               text: '允许从吧里提炼语气样本（只提建议，不会自动改人设）' }),
-            h('div', { key: 'h', className: 'tb-kv' }, '每一轮最多提 3 句，短、不带路径和链接；觉得像了再采纳。'),
+            h('div', { key: 'h', className: 'tb-kv' }, '每个吧有自己的语料，待得越久越像它；回帖前先看这个吧怎么说话。'),
+            (styleState && styleState.bars && styleState.bars.length)
+              ? h('div', { key: 'sk', className: 'tb-kv' },
+                '泡过：' + styleState.bars.slice(0, 5).map((b) => b.kw + '（' + b.mode + ' · ' + b.visits + ' 次 / ' + b.samples + ' 条）').join(' · '))
+              : h('div', { key: 'sk0', className: 'tb-kv' }, '还没泡过任何吧。'),
             proposals.filter((p) => p.status === 'pending').length
               ? h('div', { key: 'list' }, proposals.filter((p) => p.status === 'pending').map((p) =>
                 h('div', { key: p.id, style: { borderTop: '1px solid #eef2f8', marginTop: 8, paddingTop: 8 } }, [

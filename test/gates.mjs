@@ -142,6 +142,17 @@ ok(evo2.readEvolutionState().paused === false, '保险：恢复生效')
   evo2.resumeEvolution()
 }
 
+// 11.602 环境模式（按吧泡）
+{
+  const st = await import('../lib/style.mjs')
+  ok(st.deriveMode(['串子', '抽象']) === '串子', '环境：串子标签 → 串子模式')
+  const ob = st.observeBar({ kw: '抗压背锅吧', samples: ['你说是那就是吧', '乐'], tags: ['串子'], mode: '串子' })
+  ok(ob.ok && ob.style.mode === '串子', '环境：泡一次记住模式')
+  const eff = st.effectiveTraits({ abstract: 3, sharp: 2, gentle: 7, talkative: 4, imageBias: 2 }, ob.style)
+  ok(eff.sharp === 4 && eff.abstract === 5 && eff.gentle === 6, '环境：模式临时偏移旋钮', JSON.stringify(eff))
+  ok(st.renderStyle(ob.style).includes('【环境模式】串子'), '环境：提示词里带模式规则')
+}
+
 // 11.603 懒加载图片解析
 {
   const t = await import('../lib/tieba.js')
