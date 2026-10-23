@@ -896,7 +896,6 @@ window.__ModuleLoader__.load({
       const [evoState, setEvoState] = React.useState(null)
       const [versions, setVersions] = React.useState([])
       const [images, setImages] = React.useState([])
-      const [styleState, setStyleState] = React.useState(null)
       const [timeline, setTimeline] = React.useState([])
       const [styleLib, setStyleLib] = React.useState([])
 
@@ -1739,7 +1738,7 @@ window.__ModuleLoader__.load({
             ]),
 
             h(Sw, { key: 'e', on: c.evolvePersona === true, onChange: (v) => save({ evolvePersona: v }),
-              text: '允许从吧里学习语气与语料浸泡（长期浸泡受漂移阈值保护）' }),
+              text: '允许从吧里学习语气、建立风格库（回帖时检索参考）' }),
             h(Sw, { key: 'hot', on: c.learnHotOnly !== false, onChange: (v) => save({ learnHotOnly: v }),
               text: '只从高赞楼层学（app 热门接口，真实点赞数；读不到时用楼中楼数）' }),
 
@@ -1771,28 +1770,23 @@ window.__ModuleLoader__.load({
               ]),
             ]) : null,
 
-            // 按吧语料浸泡池
-            h('div', { key: 'skhd', className: 'tb-label' }, [
-              h('span', { key: 'a' }, '🫧 按吧语料浸泡池'),
-              h('span', { key: 'b', className: 'tb-kv' }, '每泡满 3 次向人设底子微调 1 格'),
+            // 风格库（检索式学习）
+            h('div', { key: 'libhd', className: 'tb-label', style: { marginTop: 10 } }, [
+              h('span', { key: 'a' }, '📚 风格库（回帖时检索参考）'),
+              h('span', { key: 'b', className: 'tb-kv' }, '只学口气 · 不照抄 · 不改人设'),
             ]),
-            (styleState && styleState.bars && styleState.bars.length)
-              ? h('div', { key: 'sk', className: 'tb-grid-2' }, styleState.bars.slice(0, 6).map((b) =>
+            styleLib.length
+              ? h('div', { key: 'libgrid', className: 'tb-grid-2' }, styleLib.slice(0, 6).map((b) =>
                 h('div', { key: b.kw, className: 'tb-subcard', style: { marginTop: 0 } }, [
-                  h('div', { key: 'h', className: 'tb-subcard-title', style: { marginBottom: 4 } }, [
-                    h('span', { key: 'n', style: { color: '#0f172a', fontWeight: 700 } }, b.kw),
-                    h('span', { key: 'm', className: 'tb-tag primary' }, b.mode + ' · 泡了 ' + b.visits + ' 次'),
+                  h('div', { key: 'h', className: 'tb-subcard-title', style: { justifyContent: 'space-between' } }, [
+                    h('span', { key: 'a' }, b.kw),
+                    h('span', { key: 'b', className: 'tb-tag primary' }, b.count + ' 条 · 均 ' + b.avgLen + ' 字'),
                   ]),
-                  h('div', { key: 'n', className: 'tb-kv', style: { marginBottom: 4 } },
-                    '距离下次底子浸泡还差 ' + (b.nextSoakIn || '?') + ' 次'),
-                  ...(b.sampleList || []).map((x, i) => h('div', { key: 's' + i, className: 'tb-kv', style: { color: '#334155' } },
-                    '「' + x + '」 · 来自 ' + b.kw)),
+                  ...(b.sampleList || []).map((x, i) => h('div', { key: 's' + i, className: 'tb-kv', style: { color: '#334155', marginTop: 4 } },
+                    '「' + x.text.slice(0, 42) + (x.text.length > 42 ? '…' : '') + '」 · 赞 ' + x.likes)),
                 ])))
-              : h('div', { key: 'sk0', className: 'tb-subcard', style: { marginTop: 0 } },
-                h('span', { className: 'tb-kv' }, '还没泡过任何吧。先在上面填「要刷的吧」，再打开学习，跑一轮后这里才会出现那个吧的语料——只学你填的那些吧。')),
+              : h('div', { key: 'lib0', className: 'tb-kv' }, '风格库还是空的。读一个吧的帖子，高赞回复会自动入库；回帖前会从这里检索参考。'),
 
-            styleLib.length ? h('div', { key: 'lib', className: 'tb-label', style: { marginTop: 10 } },
-              '风格库：' + styleLib.slice(0, 4).map((b) => b.kw + ' ' + b.count + ' 条（均 ' + b.avgLen + ' 字）').join(' · ')) : null,
             h('div', { key: 'tl', className: 'tb-label' }, '学习时间轴'),
             timeline.length
               ? h('div', { key: 'tll', className: 'tb-timeline' }, timeline.slice(0, 8).map((e, i) =>
