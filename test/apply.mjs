@@ -36,7 +36,7 @@ function makeCtx(withWeb) {
   const fs2 = await import('node:fs')
   const src = fs2.readFileSync(new URL('../client.js', import.meta.url), 'utf8')
   const cards = ['A1 账号', 'A2 每一轮', 'B1 人设', 'B2 图片库', 'C1 回帖规则', 'C2 自动化',
-    'D1 演化', 'D2 日记', 'D3 版本与导出']
+    'D1 演化', 'D2 日记']
   const groups = ['账号与刷帖', '人设与表达', '行为与规则', '成长与记录']
   const missing = cards.filter((c) => !src.includes(c))
   ok(missing.length === 0, '设置页九张卡都在', missing.join(','))
@@ -45,7 +45,9 @@ function makeCtx(withWeb) {
   const at = (x) => src.indexOf(x)
   ok(at('B1 人设') < at('B2 图片库') && at('B2 图片库') < at("title: '行为与规则'"), 'B2 图片库在 B 组内')
   ok(at('C1 回帖规则') < at('C2 自动化') && at('C2 自动化') < at("title: '成长与记录'"), 'C 组顺序 C1 → C2')
-  ok(at('D1 演化') < at('D2 日记') && at('D2 日记') < at('D3 版本与导出'), 'D 组顺序 D1 → D2 → D3')
+  ok(at('D1 演化') < at('D2 日记'), 'D 组顺序 D1 → D2')
+  ok(at('D1 演化') < at('演化时间轴') && at('演化时间轴') < at('D2 日记'), '时间轴在 D1 内')
+  ok(at('D1 演化') < at('版本与导出') && at('版本与导出') < at('D2 日记'), '版本与导出并入 D1')
   ok((src.match(/open: true/g) || []).length === 1, '默认只展开 A 组')
 
   // 界面里 save({ key: ... }) / num('key') 用到的配置键，必须真的存在于 DEFAULTS

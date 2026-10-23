@@ -29,6 +29,7 @@ import { readProposals, addProposal, getProposal, setStatus, mergeSamples, appen
 import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS, getVersion, voiceProfile } from './lib/persona.mjs'
 import { applyEvolution, canEvolveToday, readEvolutionState, driftReport, pauseEvolution, resumeEvolution } from './lib/evolution.mjs'
 import { observeBar, getStyle, renderStyle, bestSamplesFor, styleSummary, effectiveTraits, MODES, soakEffect, SOAK_EVERY } from './lib/style.mjs'
+import { appendTimeline, readTimeline } from './lib/timeline.mjs'
 import { toText, toJson } from './lib/persona-export.mjs'
 import { listImages, addImage, updateImage, removeImage, publicView, usableImages, pickImage, markUsed, imageFile, biasHint, pendingDescriptions } from './lib/images.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
@@ -304,6 +305,10 @@ export function apply(ctx, config = {}) {
           if (sub === '/cooldown/clear' && req.method === 'POST') {
             tieba.clearCooldown()
             return sendJson(res, 200, { ok: true })
+          }
+          if (sub === '/timeline' && req.method === 'GET') {
+            const n = Number(new URL(req.url, 'http://127.0.0.1').searchParams.get('n')) || 20
+            return sendJson(res, 200, { ok: true, entries: readTimeline(n) })
           }
           if (sub === '/style/state' && req.method === 'GET') {
             return sendJson(res, 200, { ok: true, bars: styleSummary() })
@@ -998,6 +1003,7 @@ export function apply(ctx, config = {}) {
             soaked = { ok: true, version: p1.version, trait: eff.traitKey, from: eff.from, to: eff.to, sample: eff.sample }
             try { appendDiary('private', `🌱 长期浸泡：${eff.reason}\n- 旋钮：${eff.traitKey} ${eff.from} → ${eff.to}${eff.sample ? '\n- 收进底子的语料：「' + eff.sample + '」' : ''}`) } catch { /* ignore */ }
             try { emitEvent('tieba.soak', { kw: ob.style.kw, visits: ob.style.visits, version: p1.version }) } catch { /* ignore */ }
+            try { appendTimeline({ type: 'soak', kw: ob.style.kw, visits: ob.style.visits, fromVersion: p0.version, toVersion: p1.version, trait: { key: eff.traitKey, from: eff.from, to: eff.to }, samples: eff.sample ? [eff.sample] : [] }) } catch { /* ignore */ }
           }
         }
       } catch { /* 浸泡失败不影响记录语料 */ }

@@ -134,6 +134,7 @@ window.__ModuleLoader__.load({
       const [versions, setVersions] = React.useState([])
       const [images, setImages] = React.useState([])
       const [styleState, setStyleState] = React.useState(null)
+      const [timeline, setTimeline] = React.useState([])
 
       const refresh = React.useCallback(async () => {
         try {
@@ -692,9 +693,23 @@ window.__ModuleLoader__.load({
               text: '允许从吧里提炼语气样本（只提建议，不会自动改人设）' }),
             h('div', { key: 'h', className: 'tb-kv' }, '每个吧有自己的语料，待得越久越像它；回帖前先看这个吧怎么说话。'),
             (styleState && styleState.bars && styleState.bars.length)
-              ? h('div', { key: 'sk', className: 'tb-kv' },
-                '泡过：' + styleState.bars.slice(0, 5).map((b) => b.kw + '（' + b.mode + ' · ' + b.visits + ' 次 / ' + b.samples + ' 条）').join(' · '))
+              ? h('div', { key: 'sk' }, styleState.bars.slice(0, 6).map((b) =>
+                h('div', { key: b.kw, style: { border: '1px solid #e2eaf5', borderRadius: 10, padding: '8px 10px', marginTop: 8 } }, [
+                  h('div', { key: 'h', style: { fontWeight: 600 } }, b.kw + ' · ' + b.mode + ' · 泡了 ' + b.visits + ' 次'),
+                  h('div', { key: 'n', className: 'tb-kv' }, '下次浸泡还差 ' + (b.nextSoakIn || '?') + ' 次'),
+                  ...(b.sampleList || []).map((x, i) => h('div', { key: 's' + i, className: 'tb-kv' }, '「' + x + '」 · 来自 ' + b.kw)),
+                ])))
               : h('div', { key: 'sk0', className: 'tb-kv' }, '还没泡过任何吧。'),
+            h('div', { key: 'tl', className: 'tb-label' }, '演化时间轴'),
+            timeline.length
+              ? h('div', { key: 'tll' }, timeline.slice(0, 8).map((e, i) =>
+                h('div', { key: i, className: 'tb-kv', style: { borderTop: '1px solid #eef2f8', padding: '4px 0' } },
+                  (e.type === 'soak' ? '🌱 ' : '✦ ') + (e.at || '') + ' · ' + (e.kw || '')
+                  + (e.fromVersion ? (' · v' + e.fromVersion + '→v' + e.toVersion) : '')
+                  + (e.trait ? (' · ' + e.trait.key + ' ' + e.trait.from + '→' + e.trait.to) : '')
+                  + ((e.samples && e.samples.length) ? (' · 学了「' + e.samples[0] + '」') : '')
+                  + (e.type === 'soak' ? (' · 第 ' + e.visits + ' 次') : ''))))
+              : h('div', { key: 'tl0', className: 'tb-kv' }, '还没有记录。'),
             proposals.filter((p) => p.status === 'pending').length
               ? h('div', { key: 'list' }, proposals.filter((p) => p.status === 'pending').map((p) =>
                 h('div', { key: p.id, style: { borderTop: '1px solid #eef2f8', marginTop: 8, paddingTop: 8 } }, [
@@ -716,37 +731,9 @@ window.__ModuleLoader__.load({
                   ]),
                 ])))
               : h('div', { key: 'none', className: 'tb-kv' }, '还没有待处理的建议。'),
-          ]),
-        ]),
-
-        // ── ⑥ 日记（折叠）──
-        h('details', { key: 'diary', className: 'tb-card' }, [
-          h('summary', { key: 's' }, ['D2 日记', h('span', { key: 't', className: 'tb-tag' }, '公开 / 私人')]),
-          h('div', { key: 'b', className: 'tb-body' }, [
-            h(Sw, { key: 'e', on: c.diaryEnabled !== false, onChange: (v) => save({ diaryEnabled: v }), text: '允许写日记' }),
-            h(Sw, { key: 'p', on: c.diaryPrivate !== false, onChange: (v) => save({ diaryPrivate: v }), text: '允许写私人日记' }),
-            h('div', { key: 'r', className: 'tb-row' }, [
-              h('button', { key: 'a', className: 'tb-btn ghost sm', disabled: busy, onClick: () => showDiary('public') }, '看给主人的日记'),
-              h('button', { key: 'b', className: 'tb-btn ghost sm', disabled: busy, onClick: () => showDiary('private') }, '翻开私人日记'),
-            ]),
-            diary ? h('pre', { key: 'd', className: 'tb-pre' }, (diary.text || '（还没有）') + '\n\n' + (diary.file || '')) : null,
-          ]),
-        ]),
-
-        h('div', { key: 'self', className: 'tb-row' }, [
-          h('button', { key: 'b', className: 'tb-btn ghost sm', disabled: busy, onClick: runSelfcheck }, '运行自检'),
-          health ? h('span', { key: 'k', className: 'tb-kv' },
-            'curl ' + (health.curl && health.curl.ok ? '✓' : '✗')
-            + (health.curl && health.curl.bin ? '（' + health.curl.bin + '）' : '')
-            + ' · 凭证 ' + (health.cookie && health.cookie.ok ? '✓' : '✗')
-            + ' · 目录 ' + (health.dirs && health.dirs.writable ? '✓' : '✗')
-            + ' · headless ' + (health.headless && health.headless.ok ? '✓' : '✗')) : null,
-        ]),
-        health ? h('pre', { key: 'hp', className: 'tb-pre' }, JSON.stringify(health, null, 1)) : null,
-
-        // ── D3 版本与导出 ──
-        h('div', { key: 'versions', className: 'tb-card' }, [
-          h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, 'D3 版本与导出'),
+        // ── 版本与导出（并入 D1）──
+        h('div', { key: 'versions', style: { borderTop: '1px solid #eef2f8', marginTop: 10, paddingTop: 8 } }, [
+          h('div', { key: 't', className: 'tb-label', style: { marginTop: 0 } }, '版本与导出'),
           h('div', { key: 'cur', className: 'tb-kv' },
             persona ? ('当前 v' + persona.version + ' · 共 ' + versions.length + ' 个快照') : ''),
           h('div', { key: 'e', className: 'tb-row' }, [
@@ -774,6 +761,34 @@ window.__ModuleLoader__.load({
             : h('div', { key: 'none', className: 'tb-kv' }, '还没有快照。改一次人设就会出现。'),
         ]),
         ]),
+
+          ]),
+        ]),
+
+        // ── ⑥ 日记（折叠）──
+        h('details', { key: 'diary', className: 'tb-card' }, [
+          h('summary', { key: 's' }, ['D2 日记', h('span', { key: 't', className: 'tb-tag' }, '公开 / 私人')]),
+          h('div', { key: 'b', className: 'tb-body' }, [
+            h(Sw, { key: 'e', on: c.diaryEnabled !== false, onChange: (v) => save({ diaryEnabled: v }), text: '允许写日记' }),
+            h(Sw, { key: 'p', on: c.diaryPrivate !== false, onChange: (v) => save({ diaryPrivate: v }), text: '允许写私人日记' }),
+            h('div', { key: 'r', className: 'tb-row' }, [
+              h('button', { key: 'a', className: 'tb-btn ghost sm', disabled: busy, onClick: () => showDiary('public') }, '看给主人的日记'),
+              h('button', { key: 'b', className: 'tb-btn ghost sm', disabled: busy, onClick: () => showDiary('private') }, '翻开私人日记'),
+            ]),
+            diary ? h('pre', { key: 'd', className: 'tb-pre' }, (diary.text || '（还没有）') + '\n\n' + (diary.file || '')) : null,
+          ]),
+        ]),
+
+        h('div', { key: 'self', className: 'tb-row' }, [
+          h('button', { key: 'b', className: 'tb-btn ghost sm', disabled: busy, onClick: runSelfcheck }, '运行自检'),
+          health ? h('span', { key: 'k', className: 'tb-kv' },
+            'curl ' + (health.curl && health.curl.ok ? '✓' : '✗')
+            + (health.curl && health.curl.bin ? '（' + health.curl.bin + '）' : '')
+            + ' · 凭证 ' + (health.cookie && health.cookie.ok ? '✓' : '✗')
+            + ' · 目录 ' + (health.dirs && health.dirs.writable ? '✓' : '✗')
+            + ' · headless ' + (health.headless && health.headless.ok ? '✓' : '✗')) : null,
+        ]),
+        health ? h('pre', { key: 'hp', className: 'tb-pre' }, JSON.stringify(health, null, 1)) : null,
 
         msg ? h('div', { key: 'm', className: 'tb-msg ' + (msg.ok ? 'ok' : 'err') }, msg.text) : null,
       ])
