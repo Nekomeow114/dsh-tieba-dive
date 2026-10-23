@@ -1009,11 +1009,20 @@ export function apply(ctx, config = {}) {
         else {
           const pick = pickImage({ id: wantImage, kw: String(args.kw), state: st, cfg })
           if (!pick.ok) imageInfo = { id: wantImage, sent: false, note: pick.error }
-          else {
-            // ⚠️ 贴吧图片上传接口没有验证过：按规格「上传失败降级为只发文字」，不重试
-            imageInfo = { id: wantImage, sent: false, note: '图片上传接口未验证，降级只发文字' }
-            log(`发图失败（${wantImage}）：上传接口未验证，降级只发文字`)
-            try { emitEvent('tieba.image.fallback', { id: wantImage, tid: args.tid }) } catch { /* ignore */ }
+          else if (!cfg.imagePostExperimental) {
+            imageInfo = { id: wantImage, sent: false, note: '带图回帖未开启（实验开关关着），只发文字' }
+          } else {
+            try {
+              const up = await tieba.uploadImage(pick.image.abs, String(args.kw))
+              if (!up.ok) throw new Error(up.error || '上传失败')
+              const ir = await tieba.replyWithImage({ kw: String(args.kw), tid: String(args.tid), content: body, imageInfo: up.imageInfo })
+              if (ir.ok) imageInfo = { id: wantImage, sent: true, note: '已带图发出（实验）' }
+              else throw new Error(ir.error || ('no=' + ir.no))
+            } catch (e) {
+              imageInfo = { id: wantImage, sent: false, note: '带图失败，已降级只发文字' }
+              log(`发图失败（${wantImage}）：${e.message}，降级只发文字`)
+              try { emitEvent('tieba.image.fallback', { id: wantImage, tid: args.tid, error: e.message }) } catch { /* ignore */ }
+            }
           }
         }
       }

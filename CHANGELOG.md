@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.14.3 — 2026-10-22
+
+- 找到手机版带图回帖参数：`/mo/q/apubpost` + `upload_img_info`（来源：TiebaPure-iOS 测试）。
+- 新增实验开关 `imagePostExperimental`（默认关）：开后才尝试真发图，失败自动降级文字。
+- `buildImageReplyFields` 纯函数 + 断言；`replyWithImage` 未验证 `_BSK` 等字段。
+
 ## 1.14.2 — 2026-10-22
 
 - 图床上传响应解析抽成 `parseUploadResponse`，补两条断言。

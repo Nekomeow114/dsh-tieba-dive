@@ -142,6 +142,14 @@ ok(evo2.readEvolutionState().paused === false, '保险：恢复生效')
   evo2.resumeEvolution()
 }
 
+// 11.605 带图回帖表单构造
+{
+  const t = await import('../lib/tieba.js')
+  const f = t.buildImageReplyFields({ kw: 'deepseek', tid: '123', fid: '28145568', tbs: 'T', content: '正文', imageInfo: 'abc,1,1,false', now: 1700000000000 })
+  ok(f.upload_img_info === 'abc,1,1,false' && f.z === '123' && f.word === 'deepseek' && f.tag === '11', '带图回帖：字段齐全')
+  ok(f._t === '1700000000000' && f.lp === '6026', '带图回帖：时间与 lp 固定')
+}
+
 // 11.61 图床上传响应解析
 const { parseUploadResponse } = await import('../lib/tieba.js')
 const upOk = parseUploadResponse("window.imageUploadResult=1;var result={imageSrc:'http:\\/\\/m.tiebaimg.com\\/x.jpg',imageInfo:'abc123,1,1,false'};")
