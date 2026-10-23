@@ -153,6 +153,9 @@ ok(st.deriveMode(['无厘头']) === '无厘头', '环境：无厘头标签 → �
   ok(eff.sharp === 4 && eff.abstract === 5 && eff.gentle === 6, '环境：模式临时偏移旋钮', JSON.stringify(eff))
   ok(st.renderStyle(ob.style).includes('【环境模式】串子'), '环境：提示词里带模式规则')
 ok(st.renderStyle(ob.style).includes('怪不得我现在看你都觉得顺眼了'), '环境：串子带反杀示范')
+ok(st.soakEffect({ visits: 2, kw: 'x', mode: '串子', samples: ['a'] }, { traits: { sharp: 2 } }) === null, '浸泡：没到 3 次不挪底子')
+const soak = st.soakEffect({ visits: 3, kw: '抗压背锅', mode: '串子', samples: ['你说是那就是吧'] }, { traits: { sharp: 2 } })
+ok(soak && soak.traitKey === 'sharp' && soak.to === 3, '浸泡：满 3 次底子挪 1 格')
 }
 
 // 11.603 懒加载图片解析

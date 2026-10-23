@@ -28,7 +28,7 @@ import { isSameOrigin } from './lib/origin.mjs'
 import { readProposals, addProposal, getProposal, setStatus, mergeSamples, appendEvolutionNote } from './lib/evolve.mjs'
 import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS, getVersion } from './lib/persona.mjs'
 import { applyEvolution, canEvolveToday, readEvolutionState, driftReport, pauseEvolution, resumeEvolution } from './lib/evolution.mjs'
-import { observeBar, getStyle, renderStyle, bestSamplesFor, styleSummary, effectiveTraits, MODES } from './lib/style.mjs'
+import { observeBar, getStyle, renderStyle, bestSamplesFor, styleSummary, effectiveTraits, MODES, soakEffect, SOAK_EVERY } from './lib/style.mjs'
 import { toText, toJson } from './lib/persona-export.mjs'
 import { listImages, addImage, updateImage, removeImage, publicView, usableImages, pickImage, markUsed, imageFile, biasHint, pendingDescriptions } from './lib/images.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
@@ -975,7 +975,28 @@ export function apply(ctx, config = {}) {
     },
     execute: async (args) => {
       if (!cfgOf().evolvePersona) return json({ ok: false, error: '语料浸泡关着（和演化同一个总开关）' })
-      return json(observeBar({ kw: args.kw, samples: args.samples, tags: args.tags, mode: args.mode }))
+      const ob = observeBar({ kw: args.kw, samples: args.samples, tags: args.tags, mode: args.mode })
+      if (!ob.ok) return json(ob)
+      // 长期浸泡：泡够次数就把味道写进底子（受漂移上限保护）
+      let soaked = null
+      try {
+        const p0 = ensurePersona(cfgOf().styleSamples)
+        const eff = soakEffect(ob.style, p0)
+        if (eff) {
+          const drift = driftReport()
+          if (drift.level === 'high') {
+            soaked = { ok: false, note: `漂移已经 ${drift.score}，先不往底子里写了` }
+          } else {
+            const patchTraits = { [eff.traitKey]: eff.to }
+            const samples = eff.sample ? [...p0.voice.samples, eff.sample] : p0.voice.samples
+            const p1 = updatePersona({ traits: patchTraits, voice: { samples } }, { reason: eff.reason })
+            soaked = { ok: true, version: p1.version, trait: eff.traitKey, from: eff.from, to: eff.to, sample: eff.sample }
+            try { appendDiary('private', `🌱 长期浸泡：${eff.reason}\n- 旋钮：${eff.traitKey} ${eff.from} → ${eff.to}${eff.sample ? '\n- 收进底子的语料：「' + eff.sample + '」' : ''}`) } catch { /* ignore */ }
+            try { emitEvent('tieba.soak', { kw: ob.style.kw, visits: ob.style.visits, version: p1.version }) } catch { /* ignore */ }
+          }
+        }
+      } catch { /* 浸泡失败不影响记录语料 */ }
+      return json({ ...ob, soaked, nextSoakIn: SOAK_EVERY - ((ob.style.visits || 0) % SOAK_EVERY) })
     },
   })
 
