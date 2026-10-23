@@ -127,8 +127,10 @@ ok(!evo2.applyEvolution({ samples: ['再来一句'] }).ok, '演化：一天只�
 const diaryDir = pathx.join(process.env.DSH_HOME, 'tieba-duty', 'diary')
 const pub = fsx.readFileSync(pathx.join(diaryDir, 'public.md'), 'utf8')
 const priv = fsx.readFileSync(pathx.join(diaryDir, 'private.md'), 'utf8')
-ok(pub.includes('版本 v') && priv.includes('旋钮：'), '演化：公开/私人日记都写了')
-ok(priv.includes('回帖：') && priv.includes('被回复：'), '演化：私人日记含事实字段')
+ok(pub.includes('版本 v'), '演化：公开日记写了')
+ok(!priv.includes('旋钮：'), '演化：不把机械明细写进私人日记')
+const tl = fsx.readFileSync(pathx.join(process.env.DSH_HOME, 'tieba-duty', 'timeline.jsonl'), 'utf8')
+ok(tl.includes('"type":"evolve"') && tl.includes('"trait"'), '演化：明细进时间轴')
 
 // 11.62 保险机制：漂移 / 暂停 / 被删联动
 const dr = evo2.driftReport()

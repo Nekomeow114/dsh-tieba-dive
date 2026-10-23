@@ -864,7 +864,7 @@ export function apply(ctx, config = {}) {
 
   tool({
     name: 'tieba_diary_write',
-    description: '写日记。scope=public 是给主人看的日记；scope=private 是私人日记（只有主人手动翻开才看得到）。',
+    description: '写日记。scope=public 是给主人看的；scope=private 写你自己的感受（感情、困惑、对人的理解），不是变更日志。',
     parameters: {
       scope: { type: 'string', description: 'public 或 private' },
       content: { type: 'string', description: '日记正文' },

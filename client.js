@@ -1845,6 +1845,7 @@ window.__ModuleLoader__.load({
             h('div', { key: 'swg', className: 'tb-grid-2' }, [
               h(Sw, { key: 'e', on: c.diaryEnabled !== false, onChange: (v) => save({ diaryEnabled: v }), text: '允许写日记（总开关）' }),
               h(Sw, { key: 'p', on: c.diaryPrivate !== false, onChange: (v) => save({ diaryPrivate: v }), text: '允许写私人日记（需手动翻开）' }),
+              h('div', { key: 'ph', className: 'tb-kv' }, '私人日记写感受、困惑、对人的理解；版本/旋钮/语料明细不写这里，去「学习时间轴」看。'),
             ]),
             h('div', { key: 'r', className: 'tb-row', style: { marginBottom: 0 } }, [
               h('button', { key: 'a', className: 'tb-btn soft sm', disabled: busy, onClick: () => showDiary('public') }, '📖 看给主人的日记'),
