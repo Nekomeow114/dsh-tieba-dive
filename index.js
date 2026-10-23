@@ -29,7 +29,7 @@ import { readProposals, addProposal, getProposal, setStatus, mergeSamples, appen
 import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS, getVersion } from './lib/persona.mjs'
 import { applyEvolution, canEvolveToday, readEvolutionState, driftReport, pauseEvolution, resumeEvolution } from './lib/evolution.mjs'
 import { toText, toJson } from './lib/persona-export.mjs'
-import { listImages, addImage, updateImage, removeImage, publicView, usableImages, pickImage, markUsed, imageFile, biasHint } from './lib/images.mjs'
+import { listImages, addImage, updateImage, removeImage, publicView, usableImages, pickImage, markUsed, imageFile, biasHint, pendingDescriptions } from './lib/images.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -734,6 +734,13 @@ export function apply(ctx, config = {}) {
       const bias = ensurePersona(cfg.styleSamples).traits.imageBias
       return json({ ok: true, images: usableImages(String((args && args.kw) || '')), imageBias: bias, hint: biasHint(bias), allowed: !!cfg.allowImages })
     },
+  })
+
+  tool({
+    name: 'tieba_image_pending',
+    description: '看哪些图还没写描述（含本地路径，供你用看图工具读；不要把这个路径写进任何公开内容）。',
+    parameters: {},
+    execute: async () => json({ ok: true, pending: pendingDescriptions() }),
   })
 
   tool({

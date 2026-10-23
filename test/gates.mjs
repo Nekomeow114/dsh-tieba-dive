@@ -163,6 +163,11 @@ const a1 = img.addImage({ name: 't.png', dataUrl: PNG, desc: '测试图', tags: 
 ok(a1.ok && a1.image.id, '图片：上传成功', a1.error || '')
 ok(img.biasHint(1).includes('基本不发') && img.biasHint(9).includes('倾向发图'), '图片：发图倾向分档文案')
 ok(!('file' in a1.image) && !('abs' in a1.image), '图片：给模型的视图不含路径')
+const pend = img.pendingDescriptions().filter((x) => x.id === a1.image.id)
+ok(pend.length === 0, '图片：有描述时不算待补')
+img.updateImage(a1.image.id, { desc: '' })
+ok(img.pendingDescriptions().some((x) => x.id === a1.image.id), '图片：空描述进入待补')
+img.updateImage(a1.image.id, { desc: '测试图' })
 const iid = a1.image.id
 const stImg = { imagesToday: { count: 0, byId: {} }, round: null }
 const cfgImg = { imagePerDay: 2 }
