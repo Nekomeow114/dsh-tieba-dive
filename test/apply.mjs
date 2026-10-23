@@ -38,6 +38,14 @@ function makeCtx(withWeb) {
   const cards = ['① 账号', '② 每一轮', '③ 人设', '④ 自动化', '⑤ 回帖规则', '⑥ 日记', '⑦ 人设演化']
   const missing = cards.filter((c) => !src.includes(c))
   ok(missing.length === 0, '设置页七张卡都在', missing.join(','))
+
+  // 界面里 save({ key: ... }) / num('key') 用到的配置键，必须真的存在于 DEFAULTS
+  const { DEFAULTS } = await import('../lib/config.mjs')
+  const used = new Set()
+  for (const m of src.matchAll(/save\(\{\s*([A-Za-z]+)\s*:/g)) used.add(m[1])
+  for (const m of src.matchAll(/num\('([A-Za-z]+)'\)/g)) used.add(m[1])
+  const unknown = [...used].filter((k) => !(k in DEFAULTS))
+  ok(unknown.length === 0, '设置页引用的配置键都在 DEFAULTS 里', unknown.join(','))
 }
 
 // 场景 A：headless（没有 webServer）

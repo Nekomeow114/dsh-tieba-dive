@@ -92,6 +92,14 @@ ok(evo.mergeSamples(new Array(40).fill('x').map((_, i) => 's' + i), ['new']).len
 const withNote = evo.appendEvolutionNote('正文', ['哈？这也行'])
 ok(withNote.includes('正文') && withNote.includes('演化记录') && withNote.includes('哈？这也行'), '演化：只追加不覆盖正文')
 
+// 11.65 配置字段往返（防「加了字段但 normalize 丢了」）
+{
+  const { DEFAULTS, normalize } = await import('../lib/config.mjs')
+  const dropped = Object.keys(DEFAULTS).filter((k) => !(k in normalize({})))
+  ok(dropped.length === 0, '配置：DEFAULTS 每个键都在 normalize 结果里', dropped.join(','))
+  ok(normalize({ evolvePersona: true }).evolvePersona === true, '配置：evolvePersona 往返正确')
+}
+
 // 11.7 同源判断
 const { isSameOrigin } = await import('../lib/origin.mjs')
 ok(isSameOrigin('http://127.0.0.1:3080', '127.0.0.1:3080'), '同源：完全一致')
