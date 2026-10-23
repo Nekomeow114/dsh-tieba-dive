@@ -1289,7 +1289,7 @@ window.__ModuleLoader__.load({
 
           h('div', { key: 'acct', className: 'tb-card' }, [
             h('div', { key: 'hd', className: 'tb-card-hd' }, [
-              h('div', { key: 't', className: 'tb-card-title' }, 'A1 账号'),
+              h('div', { key: 't', className: 'tb-card-title' }, '账号'),
               h('span', { key: 'st', className: 'tb-tag ' + (hasCookie ? 'ok' : 'warn') },
                 hasCookie ? '登录态有效 ✓' : '待配置凭证'),
             ]),
@@ -1310,7 +1310,7 @@ window.__ModuleLoader__.load({
 
           h('div', { key: 'round', className: 'tb-card' }, [
             h('div', { key: 'hd', className: 'tb-card-hd' }, [
-              h('div', { key: 't', className: 'tb-card-title' }, 'A2 每一轮'),
+              h('div', { key: 't', className: 'tb-card-title' }, '每一轮'),
               h('span', { key: 'st', className: 'tb-tag primary' },
                 `每轮读 ${c.readPerRound ?? 5} 贴 · 间隔 ${c.requestGapMs ?? 1200}ms · 去重 ${c.dedupeDays ?? 7} 天`),
             ]),
@@ -1429,7 +1429,7 @@ window.__ModuleLoader__.load({
 
           h('div', { key: 'persona', className: 'tb-card' }, [
             h('div', { key: 'hd', className: 'tb-card-hd' }, [
-              h('div', { key: 't', className: 'tb-card-title' }, 'B1 人设'),
+              h('div', { key: 't', className: 'tb-card-title' }, '人设'),
               h('span', { key: 'st', className: 'tb-tag primary' },
                 persona ? ('当前版本 v' + persona.version + ' · 核心层已锁定') : '读取人设版本中…'),
             ]),
@@ -1524,7 +1524,7 @@ window.__ModuleLoader__.load({
 
           h('div', { key: 'images', className: 'tb-card' }, [
             h('div', { key: 'hd', className: 'tb-card-hd' }, [
-              h('div', { key: 't', className: 'tb-card-title' }, 'B2 图片库'),
+              h('div', { key: 't', className: 'tb-card-title' }, '图片库'),
               h('span', { key: 'st', className: 'tb-tag' }, `已存 ${images.length} / 50 张 · 单张 ≤2MB`),
             ]),
             h('div', { key: 'u', className: 'tb-row', style: { marginTop: 0, justifyContent: 'space-between' } }, [
@@ -1599,7 +1599,7 @@ window.__ModuleLoader__.load({
 
           h('div', { key: 'reply', className: 'tb-card' }, [
             h('div', { key: 'hd', className: 'tb-card-hd' }, [
-              h('div', { key: 't', className: 'tb-card-title' }, 'C1 回帖规则'),
+              h('div', { key: 't', className: 'tb-card-title' }, '回帖规则'),
               h('span', { key: 'st', className: 'tb-tag ' + (c.autoReply ? 'ok' : '') },
                 c.autoReply ? '已开启回帖' : '默认关闭（只读安全模式）'),
             ]),
@@ -1673,7 +1673,7 @@ window.__ModuleLoader__.load({
 
           h('div', { key: 'auto', className: 'tb-card' }, [
             h('div', { key: 'hd', className: 'tb-card-hd' }, [
-              h('div', { key: 't', className: 'tb-card-title' }, 'C2 自动化'),
+              h('div', { key: 't', className: 'tb-card-title' }, '自动化'),
               h('span', { key: 'st', className: 'tb-tag' },
                 (c.autoSign ? '自动签到开' : '自动签到关') + ' · ' + (c.peakValley ? '峰谷排班开' : '排班关')),
             ]),
@@ -1734,7 +1734,7 @@ window.__ModuleLoader__.load({
 
           h('div', { key: 'evolve', className: 'tb-card' }, [
             h('div', { key: 'hd', className: 'tb-card-hd' }, [
-              h('div', { key: 't', className: 'tb-card-title' }, 'D1 演化'),
+              h('div', { key: 't', className: 'tb-card-title' }, '演化'),
               h('span', { key: 'st', className: 'tb-tag primary' }, '吃语料 · 主人点头才改'),
             ]),
 
@@ -1869,7 +1869,7 @@ window.__ModuleLoader__.load({
 
           h('div', { key: 'diary', className: 'tb-card' }, [
             h('div', { key: 'hd', className: 'tb-card-hd' }, [
-              h('div', { key: 't', className: 'tb-card-title' }, 'D2 日记'),
+              h('div', { key: 't', className: 'tb-card-title' }, '日记'),
               h('span', { key: 'st', className: 'tb-tag' }, '公开日记 / 私人日记'),
             ]),
             h('div', { key: 'swg', className: 'tb-grid-2' }, [
