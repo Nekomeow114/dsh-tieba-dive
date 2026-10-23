@@ -1788,7 +1788,7 @@ window.__ModuleLoader__.load({
                     '「' + x + '」 · 来自 ' + b.kw)),
                 ])))
               : h('div', { key: 'sk0', className: 'tb-subcard', style: { marginTop: 0 } },
-                h('span', { className: 'tb-kv' }, '还没泡过任何吧。开启学习后跑一轮就会积累各吧的说话方式。')),
+                h('span', { className: 'tb-kv' }, '还没泡过任何吧。先在上面填「要刷的吧」，再打开学习，跑一轮后这里才会出现那个吧的语料——只学你填的那些吧。')),
 
             h('div', { key: 'tl', className: 'tb-label' }, '学习时间轴'),
             timeline.length
