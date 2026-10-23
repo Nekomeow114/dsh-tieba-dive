@@ -29,7 +29,7 @@ import { readProposals, addProposal, getProposal, setStatus, mergeSamples, appen
 import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS, getVersion } from './lib/persona.mjs'
 import { applyEvolution, canEvolveToday, readEvolutionState, driftReport, pauseEvolution, resumeEvolution } from './lib/evolution.mjs'
 import { toText, toJson } from './lib/persona-export.mjs'
-import { listImages, addImage, updateImage, removeImage, publicView, usableImages, pickImage, markUsed, imageFile } from './lib/images.mjs'
+import { listImages, addImage, updateImage, removeImage, publicView, usableImages, pickImage, markUsed, imageFile, biasHint } from './lib/images.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -720,7 +720,11 @@ export function apply(ctx, config = {}) {
     name: 'tieba_image_list',
     description: '看图片库里能用的图（ID + 描述 + 标签）。看不到图片文件，也拿不到路径。',
     parameters: { kw: { type: 'string', description: '按吧过滤（可省）' } },
-    execute: async (args) => json({ ok: true, images: usableImages(String((args && args.kw) || '')) }),
+    execute: async (args) => {
+      const cfg = cfgOf()
+      const bias = ensurePersona(cfg.styleSamples).traits.imageBias
+      return json({ ok: true, images: usableImages(String((args && args.kw) || '')), imageBias: bias, hint: biasHint(bias), allowed: !!cfg.allowImages })
+    },
   })
 
   tool({
