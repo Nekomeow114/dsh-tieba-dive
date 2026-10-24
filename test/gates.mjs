@@ -34,6 +34,9 @@ ok(c.answerQuestions === true && c.dedupeDays === 7, '默认答疑开、去重 7
 ok(normalize({ bars: 'a\nb, c' }).bars.join('|') === 'a|b|c', '吧名支持换行/逗号分隔')
 ok(normalize({ replyPerDay: 999 }).replyPerDay === 30, '每日上限被夹到 30')
 ok(normalize({}).learnHotOnly === true, '默认只从高互动楼层学')
+ok(normalize({}).allowSubReply === false, '楼中楼回复默认关')
+ok(normalize({ subReplyPerRound: 99 }).subReplyPerRound === 3, '楼中楼每轮上限夹到 3')
+ok(normalize({ subReplyPerDay: 99 }).subReplyPerDay === 10, '楼中楼每天上限夹到 10')
 ok(normalize({ readPerRound: 0 }).readPerRound === 1, '每轮读至少 1')
 ok(normalize({ diaiyEnabled: false }).diaryEnabled === true, '拼错的键不会误关功能')
 

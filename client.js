@@ -1664,6 +1664,7 @@ window.__ModuleLoader__.load({
                     h('span', { key: 'c', className: 'tb-kv' }, '条'),
                   ]),
                 ]),
+                h('div', { key: 'srh', className: 'tb-kv' }, '只回自己评论下的楼中楼；默认关，开了也只在额度内回，接不上就不回。'),
                 h('div', { key: 'srq2', className: 'tb-row', style: { justifyContent: 'space-between', marginBottom: 0 } }, [
                   h('span', { key: 'a', className: 'tb-kv' }, '每天最多'),
                   h('div', { key: 'r', className: 'tb-row', style: { margin: 0 } }, [
