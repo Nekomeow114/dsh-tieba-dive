@@ -1238,7 +1238,13 @@ export function apply(ctx, config = {}) {
           }
         }
       }
-      const r = await tieba.reply({ kw: String(args.kw), tid: String(args.tid), content: body })
+      let r
+      try {
+        r = await tieba.replyFloor({ kw: String(args.kw), tid: String(args.tid), content: body })
+      } catch (e) {
+        log(`App 回帖失败，退回网页：${e.message}`)
+        r = await tieba.reply({ kw: String(args.kw), tid: String(args.tid), content: body })
+      }
       if (r.ok) {
         st.replies += 1
         st.lastReplyAt = Date.now()
