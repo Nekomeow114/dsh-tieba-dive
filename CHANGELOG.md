@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.25.0 (wip) — 2026-10-23
+
+- 新增只读工具 `tieba_sub_replies`：app protobuf `/c/f/pb/floor?cmd=302002` 读楼中楼
+  （id、正文、作者 id/昵称、赞数、时间）。
+- 已定位楼中楼回复接口：`/c/c/post/add?cmd=309731`（quote_id + sub_post_id + reply_uid），
+  写功能待确认后再接。
+
 ## 1.24.3 — 2026-10-23
 
 首个发布到 GitHub 的新版（此前远端停在 1.7.3）。

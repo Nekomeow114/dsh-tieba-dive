@@ -999,6 +999,20 @@ export function apply(ctx, config = {}) {
   })
 
   tool({
+    name: 'tieba_sub_replies',
+    description: '读某一层楼下的楼中楼（只读）。pid 是楼层 id，可从 tieba_thread 的楼层或自己的回帖记录里拿。',
+    parameters: {
+      tid: { type: 'string', required: true, description: '帖子 id' },
+      pid: { type: 'string', required: true, description: '楼层 id（不是楼层号）' },
+      pn: { type: 'number', description: '页码，默认 1' },
+    },
+    execute: async (args) => {
+      const subs = await tieba.getSubReplies(String(args.tid), String(args.pid), { pn: Number(args.pn) || 1 })
+      return json({ ok: true, tid: String(args.tid), pid: String(args.pid), count: subs.length, subs })
+    },
+  })
+
+  tool({
     name: 'tieba_style_refs',
     description: '从风格库检索这个吧的高赞回复当参考（few-shot）。只学口气，不许照抄。',
     parameters: {
