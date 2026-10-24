@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.28.2 — 2026-10-24
+
+- 修 GUI 里「找不到 dsh」：自动按 node 同目录 / `/usr/local/bin` / 用户 bin / nvm 找绝对路径，
+  `dshBin` 显式配置优先。
+- 修 `runner.mjs` 的 `spawnAt` / `deadline` 未定义：跑完一轮不再抛 ReferenceError。
+
 ## 1.28.1 — 2026-10-24
 
 - 修「显示未找到」：`tieba_thread` 返回 `floorIds`（楼层号→pid），`hotFloors` 带 `id`；

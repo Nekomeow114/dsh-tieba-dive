@@ -197,6 +197,13 @@ const upOk = parseUploadResponse("window.imageUploadResult=1;var result={imageSr
 ok(upOk.ok && upOk.imageInfo === 'abc123,1,1,false' && upOk.imageSrc.includes('m.tiebaimg.com'), '图床：解析成功响应')
 ok(!parseUploadResponse('{"errorMsg":"图片上传失败，请重新上传"}').ok, '图床：失败响应识别')
 
+// 11.60 runner：显式路径与自动查找
+{
+  const runner = await import('../lib/runner.mjs')
+  ok(runner.resolveDshBin('/bin/true') === '/bin/true', 'runner：显式 dsh 路径优先')
+  ok(/dsh/.test(runner.resolveDshBin('')), 'runner：能找到 dsh 绝对路径')
+}
+
 // 11.61 风格库（检索式）
 {
   const lib = await import('../lib/stylelib.mjs')
