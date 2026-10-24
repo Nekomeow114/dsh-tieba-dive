@@ -1057,6 +1057,7 @@ export function apply(ctx, config = {}) {
       const r = await tieba.replySub({
         tid: String(args.tid), kw: String(args.kw), quoteId: String(args.pid),
         subPostId: String(args.subId), replyUid: String(sub.author.id), content: text,
+        replyName: sub.author.nameShow, replyPortrait: sub.author.portrait,
       })
       st.subReplies = (Number(st.subReplies) || 0) + 1
       if (st.round) st.round.subReplies = (Number(st.round.subReplies) || 0) + 1
