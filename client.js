@@ -941,7 +941,7 @@ window.__ModuleLoader__.load({
         try {
           const [ev, tl] = await Promise.all([
             jget('/evolution/state').catch(() => null),
-            jget('/timeline?n=50').catch(() => null),
+            jget('/timeline?n=20').catch(() => null),
           ])
           if (ev) setEvoState(ev)
           if (tl && Array.isArray(tl.entries)) setTimeline(tl.entries)
@@ -1817,9 +1817,9 @@ window.__ModuleLoader__.load({
             timeline.length
               ? h('div', { key: 'tlwrap' }, [
                 h('div', { key: 'tlhint', className: 'tb-kv' },
-                  '最近 ' + Math.min(timeline.length, 50) + ' 条，可上下滑动'),
+                  '最近 ' + Math.min(timeline.length, 20) + ' 条，可上下滑动'),
                 h('div', { key: 'tll', className: 'tb-timeline-scroll' },
-                  timeline.slice(0, 50).map((e, i) =>
+                  timeline.slice(0, 20).map((e, i) =>
                     h('div', { key: i, className: 'tb-tl-item' },
                       (e.type === 'style' ? '📚 入库 ' + e.added + ' 条 · ' : (e.type === 'soak' ? '🌱 学习 · ' : '✦ 学习 · ')) + (e.at || '') + (e.kw ? ' · ' + e.kw : '')
                       + (e.fromVersion ? (' · v' + e.fromVersion + ' → v' + e.toVersion) : '')
