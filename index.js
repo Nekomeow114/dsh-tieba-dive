@@ -1013,6 +1013,60 @@ export function apply(ctx, config = {}) {
   })
 
   tool({
+    name: 'tieba_reply_sub',
+    description: '回复自己评论下的某条楼中楼。⚠️ 公开内容、用用户的号：必须 confirm: true；'
+      + '只允许自己楼层下的子楼；受每轮/每天上限限制，默认关闭。',
+    parameters: {
+      kw: { type: 'string', required: true, description: '吧名' },
+      tid: { type: 'string', required: true, description: '帖子 id' },
+      pid: { type: 'string', required: true, description: '自己那条评论的楼层 id' },
+      subId: { type: 'string', required: true, description: '要回复的楼中楼 id' },
+      content: { type: 'string', required: true, description: '回复正文（4~300 字）' },
+      confirm: { type: 'boolean', description: '必须显式传 true：表示用户已同意发出去' },
+    },
+    execute: async (args) => {
+      if (args.confirm !== true) return json({ ok: false, error: '没确认：要发公开楼中楼得传 confirm: true' })
+      const cfg = cfgOf()
+      if (!cfg.allowSubReply) return json({ ok: false, error: '楼中楼回复是关着的：去设置里打开「回复自己楼中楼」' })
+      if (!tieba.hasCookie()) return json({ ok: false, error: '还没贴 BDUSS' })
+      const text = String(args.content || '').trim()
+      if (text.length < 4 || text.length > 300) return json({ ok: false, error: '正文要 4~300 字' })
+      if (cfg.toneGate) {
+        const hit = toneCheck(text)
+        if (hit.length) return json({ ok: false, error: `这句太像客服了（命中：${hit.join('、')}）` })
+      }
+      const guard = checkOutbound(text)
+      if (!guard.ok) return json({ ok: false, error: `这句里有不该发的东西（${guard.hits.join('、')}）` })
+
+      const st = freshState()
+      if (st.subReplies >= cfg.subReplyPerDay) return json({ ok: false, error: `今天的楼中楼额度用完了（${cfg.subReplyPerDay} 条）` })
+      if (st.round && (Number(st.round.subReplies) || 0) >= cfg.subReplyPerRound) {
+        return json({ ok: false, error: `本轮的楼中楼额度用完了（${cfg.subReplyPerRound} 条）` })
+      }
+
+      const me = await tieba.selfUid()
+      const posts = await tieba.hotReplies(String(args.tid), { rn: 100 })
+      const floor = posts.find((p) => String(p.id) === String(args.pid))
+      if (!floor || floor.authorId !== me) return json({ ok: false, error: '这个楼层不是你自己的评论——楼中楼只回自己的楼' })
+      const subs = await tieba.getSubReplies(String(args.tid), String(args.pid))
+      const sub = subs.find((x) => String(x.id) === String(args.subId))
+      if (!sub) return json({ ok: false, error: '没找到这条楼中楼' })
+      if (!sub.author.id) return json({ ok: false, error: '拿不到对方 uid，先别回' })
+      if (sub.author.id === me) return json({ ok: false, error: '这条是你自己回的，不回自己' })
+
+      const r = await tieba.replySub({
+        tid: String(args.tid), kw: String(args.kw), quoteId: String(args.pid),
+        subPostId: String(args.subId), replyUid: String(sub.author.id), content: text,
+      })
+      st.subReplies = (Number(st.subReplies) || 0) + 1
+      if (st.round) st.round.subReplies = (Number(st.round.subReplies) || 0) + 1
+      writeState(st)
+      audit({ kind: 'sub-reply', kw: args.kw, tid: String(args.tid), pid: String(args.pid), subId: String(args.subId), to: sub.author.nameShow, content: text, newPid: r.pid })
+      return json({ ok: true, pid: r.pid, to: sub.author.nameShow, content: text })
+    },
+  })
+
+  tool({
     name: 'tieba_style_refs',
     description: '从风格库检索这个吧的高赞回复当参考（few-shot）。只学口气，不许照抄。',
     parameters: {

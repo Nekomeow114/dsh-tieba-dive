@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.26.0 (wip) — 2026-10-23
+
+- 新增 `tieba_reply_sub`：回复**自己评论下的**楼中楼，默认关闭；
+  每轮/每天上限可配（默认 1 / 3），必须 `confirm: true`。
+- 写接口：app protobuf `/c/c/post/add?cmd=309731`（quote_id + sub_post_id + reply_uid）。
+- 关卡：校验楼层作者是自己、子楼存在、目标不是自己；内容走语气闸与凭证过滤。
+- C1 增加「回复自己楼中楼」开关与上限。
+
 ## 1.25.0 (wip) — 2026-10-23
 
 - 新增只读工具 `tieba_sub_replies`：app protobuf `/c/f/pb/floor?cmd=302002` 读楼中楼

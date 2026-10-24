@@ -1654,6 +1654,24 @@ window.__ModuleLoader__.load({
                   ]),
                 ]),
               ]),
+              h('div', { key: 'subbox', className: 'tb-subcard', style: { marginTop: 0 } }, [
+                h(Sw, { key: 'sr', on: c.allowSubReply === true, onChange: (v) => save({ allowSubReply: v }),
+                  text: '允许回复自己评论下的楼中楼（默认关）' }),
+                h('div', { key: 'srq1', className: 'tb-row', style: { justifyContent: 'space-between' } }, [
+                  h('span', { key: 'a', className: 'tb-kv' }, '每轮最多'),
+                  h('div', { key: 'r', className: 'tb-row', style: { margin: 0 } }, [
+                    h('input', { key: 'b', className: 'tb-num', type: 'number', ...num('subReplyPerRound') }),
+                    h('span', { key: 'c', className: 'tb-kv' }, '条'),
+                  ]),
+                ]),
+                h('div', { key: 'srq2', className: 'tb-row', style: { justifyContent: 'space-between', marginBottom: 0 } }, [
+                  h('span', { key: 'a', className: 'tb-kv' }, '每天最多'),
+                  h('div', { key: 'r', className: 'tb-row', style: { margin: 0 } }, [
+                    h('input', { key: 'b', className: 'tb-num', type: 'number', ...num('subReplyPerDay') }),
+                    h('span', { key: 'c', className: 'tb-kv' }, '条'),
+                  ]),
+                ]),
+              ]),
               h('div', { key: 'imgbox', className: 'tb-subcard', style: { marginTop: 0 } }, [
                 h(Sw, { key: 'img', on: c.allowImages === true, onChange: (v) => save({ allowImages: v }),
                   text: '允许 AI 发图（失败降级文字）' }),
