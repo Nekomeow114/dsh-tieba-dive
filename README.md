@@ -121,7 +121,8 @@ BDUSS 获取方式：电脑浏览器登录贴吧 → `F12` → Application → C
 
 楼中楼是楼层下的子回复。插件支持：
 
-- **读**：`tieba_sub_replies({tid, pid})`，`pid` 是楼层 id（不是楼层号）；
+- **读**：`tieba_sub_replies({tid, pid})`；`pid` 是楼层 id（长数字），只知道楼层号时传 `floor`；
+  `tieba_thread` 现在会返回 `floorIds`（楼层号 → id）和带 id 的 `hotFloors`；
 - **回**：`tieba_reply_sub({kw, tid, pid, subId, content, confirm: true})`。
 
 限制：

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.28.1 — 2026-10-24
+
+- 修「显示未找到」：`tieba_thread` 返回 `floorIds`（楼层号→pid），`hotFloors` 带 `id`；
+  `tieba_sub_replies` / `tieba_reply_sub` 支持直接传 `floor`，自动换算楼层 id。
+- 楼中楼为空时明确提示「这层没有楼中楼」，不再含糊。
+
 ## 1.28.0 (wip) — 2026-10-24
 
 - 主楼回帖改为 **App protobuf 优先**（`/c/c/post/add?cmd=309731`），失败再退回网页表单；

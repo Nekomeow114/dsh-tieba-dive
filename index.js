@@ -964,7 +964,8 @@ export function apply(ctx, config = {}) {
       // 真实热门：app protobuf 接口，带点赞数；失败就用手机版页面的楼中楼数
       try {
         const hot = await tieba.hotReplies(tid, { rn: 30 })
-        r.hotFloors = hot.slice(0, 6).map((p) => ({ floor: p.floor, likes: p.likes, replies: p.replies, text: p.text }))
+        r.hotFloors = hot.slice(0, 6).map((p) => ({ floor: p.floor, id: p.id, likes: p.likes, replies: p.replies, text: p.text }))
+        r.floorIds = Object.fromEntries(hot.map((p) => [p.floor, p.id]))   // 楼层号 → 楼层 id
         r.likesKnown = true
         if (cfgOf().evolvePersona && r.kw) {
           try {
@@ -1000,15 +1001,30 @@ export function apply(ctx, config = {}) {
 
   tool({
     name: 'tieba_sub_replies',
-    description: '读某一层楼下的楼中楼（只读）。pid 是楼层 id，可从 tieba_thread 的楼层或自己的回帖记录里拿。',
+    description: '读某一层楼下的楼中楼（只读）。pid 是楼层 id（可从 tieba_thread 的 floorIds / hotFloors 拿）；'
+      + '只知道楼层号时传 floor，会自动换算。',
     parameters: {
       tid: { type: 'string', required: true, description: '帖子 id' },
-      pid: { type: 'string', required: true, description: '楼层 id（不是楼层号）' },
+      pid: { type: 'string', description: '楼层 id（长数字，不是楼层号）' },
+      floor: { type: 'number', description: '楼层号（如 18）；不知道 pid 时用它' },
       pn: { type: 'number', description: '页码，默认 1' },
     },
     execute: async (args) => {
-      const subs = await tieba.getSubReplies(String(args.tid), String(args.pid), { pn: Number(args.pn) || 1 })
-      return json({ ok: true, tid: String(args.tid), pid: String(args.pid), count: subs.length, subs })
+      const tid = String(args.tid)
+      let pid = String(args.pid || '').trim()
+      let note = ''
+      const wantFloor = Number(args.floor) || (/^\d{1,4}$/.test(pid) ? Number(pid) : 0)
+      if ((!pid || /^\d{1,4}$/.test(pid)) && wantFloor) {
+        const posts = await tieba.hotReplies(tid, { rn: 100 })
+        const hit = posts.find((p) => p.floor === wantFloor)
+        if (!hit) return json({ ok: false, error: `没找到第 ${wantFloor} 楼（可能被吞或页码不对）` })
+        pid = String(hit.id)
+        note = `按楼层号 ${wantFloor} 换算成 pid ${pid}`
+      }
+      if (!pid) return json({ ok: false, error: '要给 pid（楼层 id）或 floor（楼层号）' })
+      const subs = await tieba.getSubReplies(tid, pid, { pn: Number(args.pn) || 1 })
+      if (!subs.length) return json({ ok: true, tid, pid, count: 0, subs: [], note: (note ? note + '；' : '') + '这层没有楼中楼（或这层已被吞）' })
+      return json({ ok: true, tid, pid, count: subs.length, subs, note })
     },
   })
 
@@ -1019,7 +1035,8 @@ export function apply(ctx, config = {}) {
     parameters: {
       kw: { type: 'string', required: true, description: '吧名' },
       tid: { type: 'string', required: true, description: '帖子 id' },
-      pid: { type: 'string', required: true, description: '自己那条评论的楼层 id' },
+      pid: { type: 'string', description: '自己那条评论的楼层 id；不知道就传 floor' },
+      floor: { type: 'number', description: '自己那条评论的楼层号（如 18）' },
       subId: { type: 'string', required: true, description: '要回复的楼中楼 id' },
       content: { type: 'string', required: true, description: '回复正文（4~300 字）' },
       confirm: { type: 'boolean', description: '必须显式传 true：表示用户已同意发出去' },
@@ -1046,23 +1063,29 @@ export function apply(ctx, config = {}) {
 
       const me = await tieba.selfUid()
       const posts = await tieba.hotReplies(String(args.tid), { rn: 100 })
-      const floor = posts.find((p) => String(p.id) === String(args.pid))
+      let pid = String(args.pid || '').trim()
+      const wantFloor = Number(args.floor) || (/^\d{1,4}$/.test(pid) ? Number(pid) : 0)
+      if (wantFloor && (!pid || /^\d{1,4}$/.test(pid))) {
+        const byFloor = posts.find((p) => p.floor === wantFloor)
+        if (byFloor) pid = String(byFloor.id)
+      }
+      const floor = posts.find((p) => String(p.id) === pid)
       if (!floor || floor.authorId !== me) return json({ ok: false, error: '这个楼层不是你自己的评论——楼中楼只回自己的楼' })
-      const subs = await tieba.getSubReplies(String(args.tid), String(args.pid))
+      const subs = await tieba.getSubReplies(String(args.tid), pid)
       const sub = subs.find((x) => String(x.id) === String(args.subId))
       if (!sub) return json({ ok: false, error: '没找到这条楼中楼' })
       if (!sub.author.id) return json({ ok: false, error: '拿不到对方 uid，先别回' })
       if (sub.author.id === me) return json({ ok: false, error: '这条是你自己回的，不回自己' })
 
       const r = await tieba.replySub({
-        tid: String(args.tid), kw: String(args.kw), quoteId: String(args.pid),
+        tid: String(args.tid), kw: String(args.kw), quoteId: pid,
         subPostId: String(args.subId), replyUid: String(sub.author.id), content: text,
         replyName: sub.author.nameShow, replyPortrait: sub.author.portrait,
       })
       st.subReplies = (Number(st.subReplies) || 0) + 1
       if (st.round) st.round.subReplies = (Number(st.round.subReplies) || 0) + 1
       writeState(st)
-      audit({ kind: 'sub-reply', kw: args.kw, tid: String(args.tid), pid: String(args.pid), subId: String(args.subId), to: sub.author.nameShow, content: text, newPid: r.pid })
+      audit({ kind: 'sub-reply', kw: args.kw, tid: String(args.tid), pid, subId: String(args.subId), to: sub.author.nameShow, content: text, newPid: r.pid })
       return json({ ok: true, pid: r.pid, to: sub.author.nameShow, content: text })
     },
   })
