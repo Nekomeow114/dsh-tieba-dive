@@ -703,6 +703,15 @@ window.__ModuleLoader__.load({
       .tb-img-card:hover {
         box-shadow: var(--tb-shadow-md);
       }
+      .tb-timeline-scroll {
+        max-height: 56vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-right: 4px;
+        margin-top: 6px;
+      }
+      .tb-timeline-scroll::-webkit-scrollbar { width: 6px; }
+      .tb-timeline-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
       .tb-ver-item {
         display: flex;
         flex-wrap: wrap;
@@ -932,7 +941,7 @@ window.__ModuleLoader__.load({
         try {
           const [ev, tl] = await Promise.all([
             jget('/evolution/state').catch(() => null),
-            jget('/timeline?n=12').catch(() => null),
+            jget('/timeline?n=50').catch(() => null),
           ])
           if (ev) setEvoState(ev)
           if (tl && Array.isArray(tl.entries)) setTimeline(tl.entries)
@@ -1806,14 +1815,21 @@ window.__ModuleLoader__.load({
 
             h('div', { key: 'tl', className: 'tb-label' }, '学习时间轴'),
             timeline.length
-              ? h('div', { key: 'tll', className: 'tb-timeline' }, timeline.slice(0, 8).map((e, i) =>
-                h('div', { key: i, className: 'tb-tl-item' },
-                  (e.type === 'style' ? '📚 入库 ' + e.added + ' 条 · ' : (e.type === 'soak' ? '🌱 学习 · ' : '✦ 学习 · ')) + (e.at || '') + (e.kw ? ' · ' + e.kw : '')
-                  + (e.fromVersion ? (' · v' + e.fromVersion + ' → v' + e.toVersion) : '')
-                  + (e.trait ? (' · ' + e.trait.key + ' ' + e.trait.from + '→' + e.trait.to) : '')
-                  + ((e.samples && e.samples.length) ? (' · 学了「' + e.samples[0] + '」') : '')
-                  + ((e.type === 'style' && e.avgLen) ? (' · 均 ' + e.avgLen + ' 字 · 共 ' + e.total + ' 条') : '')
-                  + (e.type === 'soak' ? (' · 第 ' + e.visits + ' 次') : ''))))
+              ? h('div', { key: 'tlwrap' }, [
+                h('div', { key: 'tlhint', className: 'tb-kv' },
+                  '最近 ' + Math.min(timeline.length, 50) + ' 条，可上下滑动'),
+                h('div', { key: 'tll', className: 'tb-timeline-scroll' },
+                  timeline.slice(0, 50).map((e, i) =>
+                    h('div', { key: i, className: 'tb-tl-item' },
+                      (e.type === 'style' ? '📚 入库 ' + e.added + ' 条 · ' : (e.type === 'soak' ? '🌱 学习 · ' : '✦ 学习 · ')) + (e.at || '') + (e.kw ? ' · ' + e.kw : '')
+                      + (e.fromVersion ? (' · v' + e.fromVersion + ' → v' + e.toVersion) : '')
+                      + (e.trait ? (' · ' + e.trait.key + ' ' + e.trait.from + '→' + e.trait.to) : '')
+                      + ((e.samples && e.samples.length) ? (' · 学了「' + e.samples[0] + '」') : '')
+                      + ((e.type === 'style' && e.avgLen) ? (' · 均 ' + e.avgLen + ' 字 · 共 ' + e.total + ' 条') : '')
+                      + (e.type === 'soak' ? (' · 第 ' + e.visits + ' 次') : '')),
+                  ),
+                ),
+              ])
               : h('div', { key: 'tl0', className: 'tb-kv' }, '还没有记录。跑一轮、读到高赞回复就会出现在这里。'),
 
             h('div', { key: 'div', className: 'tb-divider' }),
