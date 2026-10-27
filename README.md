@@ -239,7 +239,27 @@ $DSH_HOME/tieba-duty/
 - 每次改声音层前存完整快照（`persona-versions/vNNNN.json`），版本号 +1，可回滚；
 - 旧「泡满 3 次微调人设」保留为 `allowSoak`，**默认关闭**。
 
-## 导出
+## 语风导出
+
+「学习」卡右上角的「⬇ 导出语风」会下载一个 JSON：
+
+```json
+{
+  "format": "dsh-tieba-style",
+  "version": 1,
+  "bars": [
+    { "kw": "deepseek", "stats": { "avgLen": 32, "top": ["..." ] },
+      "samples": [{ "text": "...", "likes": 59 }],
+      "prompt": "你在「deepseek」吧待过一阵，那里的人这么说话……" }
+  ]
+}
+```
+
+- 每个吧一段 `prompt`，可直接粘进 QQ 机器人/其他 agent 的人设；
+- 样本是公开高赞回复，**不含用户名、头像、路径**；
+- 提示词明确写了「只学口气，不照抄」。
+
+## 人设导出
 
 「学习」卡底部的「版本与导出」折叠块里，可导出当前或任意历史版本：
 

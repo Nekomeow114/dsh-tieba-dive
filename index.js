@@ -30,7 +30,7 @@ import { ensurePersona, readPersona, updatePersona, listVersions, rollback, rend
 import { applyEvolution, canEvolveToday, readEvolutionState, driftReport, pauseEvolution, resumeEvolution } from './lib/evolution.mjs'
 import { observeBar, getStyle, renderStyle, bestSamplesFor, styleSummary, effectiveTraits, MODES, soakEffect, SOAK_EVERY } from './lib/style.mjs'
 import { appendTimeline, readTimeline } from './lib/timeline.mjs'
-import { ingest as ingestStyle, retrieve as retrieveStyle, librarySummary } from './lib/stylelib.mjs'
+import { ingest as ingestStyle, retrieve as retrieveStyle, librarySummary, exportStyle } from './lib/stylelib.mjs'
 import { toText, toJson } from './lib/persona-export.mjs'
 import { listImages, addImage, updateImage, removeImage, publicView, usableImages, pickImage, markUsed, imageFile, biasHint, pendingDescriptions } from './lib/images.mjs'
 import { writeManifest, readManifests, emitEvent, detect } from './lib/integrations.mjs'
@@ -310,6 +310,14 @@ export function apply(ctx, config = {}) {
           if (sub === '/timeline' && req.method === 'GET') {
             const n = Number(new URL(req.url, 'http://127.0.0.1').searchParams.get('n')) || 20
             return sendJson(res, 200, { ok: true, entries: readTimeline(n) })
+          }
+          if (sub === '/stylelib/export' && req.method === 'GET') {
+            const u = new URL(req.url, 'http://127.0.0.1')
+            const data = exportStyle({ kw: u.searchParams.get('kw') || '' })
+            res.setHeader('Content-Type', 'application/json; charset=utf-8')
+            res.setHeader('Content-Disposition', `attachment; filename="tieba-style-${today()}.json"`)
+            res.setHeader('Cache-Control', 'no-store')
+            return res.end(JSON.stringify(data, null, 1))
           }
           if (sub === '/stylelib/state' && req.method === 'GET') {
             return sendJson(res, 200, { ok: true, bars: librarySummary() })

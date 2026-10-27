@@ -197,6 +197,16 @@ const upOk = parseUploadResponse("window.imageUploadResult=1;var result={imageSr
 ok(upOk.ok && upOk.imageInfo === 'abc123,1,1,false' && upOk.imageSrc.includes('m.tiebaimg.com'), '图床：解析成功响应')
 ok(!parseUploadResponse('{"errorMsg":"图片上传失败，请重新上传"}').ok, '图床：失败响应识别')
 
+// 11.59 语风导出
+{
+  const lib = await import('../lib/stylelib.mjs')
+  const ex = lib.exportStyle()
+  ok(ex.format === 'dsh-tieba-style' && ex.version === 1, '导出：格式与版本')
+  ok(Array.isArray(ex.bars) && ex.bars.length > 0, '导出：有吧数据')
+  ok(ex.bars[0].prompt.includes('不要照抄') && ex.bars[0].samples.length > 0, '导出：提示词与样本')
+  ok(!JSON.stringify(ex).includes('portrait'), '导出：不含头像/用户名')
+}
+
 // 11.60 runner：显式路径与自动查找
 {
   const runner = await import('../lib/runner.mjs')

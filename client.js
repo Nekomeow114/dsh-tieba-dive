@@ -1800,6 +1800,8 @@ window.__ModuleLoader__.load({
             h('div', { key: 'libhd', className: 'tb-label', style: { marginTop: 10 } }, [
               h('span', { key: 'a' }, '📚 风格库（回帖时检索参考）'),
               h('span', { key: 'b', className: 'tb-kv' }, '只学口气 · 不照抄 · 不改人设'),
+              h('button', { key: 'exp', className: 'tb-btn ghost sm', style: { marginLeft: 'auto' },
+                onClick: () => { window.location.href = '/api/tieba-duty/stylelib/export' } }, '⬇ 导出语风'),
             ]),
             styleLib.length
               ? h('div', { key: 'libgrid', className: 'tb-grid-2' }, styleLib.slice(0, 6).map((b) =>
