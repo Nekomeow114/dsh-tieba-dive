@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.30.0 — 2026-10-24
+
+- 新增零依赖 MCP stdio server（`mcp-server.mjs`），只读：
+  `tieba_settings / tieba_list / tieba_thread / tieba_sub_replies / tieba_style_refs / tieba_report_read / tieba_whoami`。
+- `test/mcp-smoke.mjs`：不用 Codex，自己起 server 走 initialize / tools/list / tools/call。
+- 可用于 Codex、Claude Desktop、AstrBot 等支持 MCP 的客户端。
+
 ## 1.29.0 — 2026-10-24
 
 - 新增**语风导出**：学习卡右上「导出语风」→ `dsh-tieba-style` JSON，

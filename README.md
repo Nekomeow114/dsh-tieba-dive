@@ -37,6 +37,46 @@
 ```
 
 默认不改变人设；旧版「泡满 3 次微调旋钮」已改为显式开关 `allowSoak`，**默认关闭**。
+## MCP（Codex / Claude Desktop / AstrBot）
+
+仓库自带一个**零依赖、只读**的 MCP stdio server：`mcp-server.mjs`。
+
+```bash
+DSH_HOME=/root/.dsh node mcp-server.mjs
+```
+
+暴露的工具：
+
+```
+tieba_settings · tieba_list · tieba_thread · tieba_sub_replies
+tieba_style_refs · tieba_report_read · tieba_whoami
+```
+
+故意**不包含**回帖/发帖/签到——MCP 侧只读，避免别的客户端拿账号乱发。
+
+测试不用装 Codex：
+
+```bash
+npm run test:mcp
+```
+
+它会自己起 server，走 `initialize → tools/list → tools/call`，四项全 PASS 就说明协议通了。
+也可以 `npx @modelcontextprotocol/inspector node mcp-server.mjs` 用网页点。
+
+AstrBot / Codex 的 MCP 配置（命令 + 环境变量）：
+
+```json
+{
+  "mcpServers": {
+    "tieba": {
+      "command": "node",
+      "args": ["/绝对路径/dsh-tieba-scroll/mcp-server.mjs"],
+      "env": { "DSH_HOME": "/root/.dsh" }
+    }
+  }
+}
+```
+
 ## 安装
 
 ```bash
