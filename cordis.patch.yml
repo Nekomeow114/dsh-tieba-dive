@@ -1,14 +1,14 @@
 # ============================================================================
-# dsh-tieba-scroll —— DSH bundle patch（插件自带的挂载声明）
+# dsh-tieba-dive —— DSH bundle patch（插件自带的挂载声明）
 # ============================================================================
 # 装上之后，profile 只要在 `dsh.profile.bundles` 里列出本包名即生效：
-#   dsh plugin --profile web add dsh-tieba-scroll
-#   （本地开发：dsh plugin --profile web add link:/path/to/dsh-tieba-scroll）
+#   dsh plugin --profile web add dsh-tieba-dive
+#   （本地开发：dsh plugin --profile web add link:/path/to/dsh-tieba-dive）
 # ============================================================================
 
 - insert:
-    - id: tieba-scroll
-      name: dsh-tieba-scroll
+    - id: tieba-dive
+      name: dsh-tieba-dive
       config:
         # 真正的用户配置在插件自己的设置页/设置项里，这里只放默认值
         enabled: true

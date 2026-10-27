@@ -9,7 +9,7 @@
  *   · 顶部浮动消息条 + 底部环境自检栏，任何操作即时反馈。
  */
 window.__ModuleLoader__.load({
-  id: 'dsh-tieba-scroll',
+  id: 'dsh-tieba-dive',
   factory: (require) => {
     const React = require('react')
     const h = React.createElement
@@ -1923,14 +1923,14 @@ window.__ModuleLoader__.load({
       inject: ['slots'],
       apply(ctx) {
         const style = document.createElement('style')
-        style.setAttribute('data-plugin-css', 'dsh-tieba-scroll')
+        style.setAttribute('data-plugin-css', 'dsh-tieba-dive')
         style.textContent = CSS
         document.head.appendChild(style)
-        ctx.effect(() => () => style.remove(), 'dsh-tieba-scroll: 设置页样式')
+        ctx.effect(() => () => style.remove(), 'dsh-tieba-dive: 设置页样式')
         const slots = (typeof ctx.get === 'function' ? ctx.get('slots') : undefined) || ctx.slots
         if (!slots) return
         slots.inject('settings.section', () => slots.register(
-          { name: 'settings.section', id: 'tieba-scroll', order: 31, label: '刷贴吧' },
+          { name: 'settings.section', id: 'tieba-dive', order: 31, label: '刷贴吧' },
           () => h(Boundary, null, h(Panel)),
         ))
       },
