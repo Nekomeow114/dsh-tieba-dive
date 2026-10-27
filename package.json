@@ -1,6 +1,6 @@
 {
   "name": "dsh-tieba-dive",
-  "version": "1.31.1",
+  "version": "1.31.2",
   "description": "DSH 插件 · 泡贴吧：读帖挑重点、写日报、自动签到；学习每个吧的语风（风格库），回帖与楼中楼可选（默认关）。支持人设、日记、峰谷定时与只读 MCP。",
   "keywords": [
     "dsh",
@@ -35,11 +35,12 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node test/smoke.mjs && node test/gates.mjs && node test/apply.mjs && node test/mcp-smoke.mjs",
+    "test": "node test/smoke.mjs && node test/gates.mjs && node test/apply.mjs && node test/mcp-smoke.mjs && node test/cookie.mjs",
     "test:smoke": "node test/smoke.mjs",
     "test:gates": "node test/gates.mjs",
     "test:apply": "node test/apply.mjs",
-    "test:mcp": "node test/mcp-smoke.mjs"
+    "test:mcp": "node test/mcp-smoke.mjs",
+    "test:cookie": "node test/cookie.mjs"
   },
   "repository": {
     "type": "git",

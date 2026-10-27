@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.31.2 — 2026-10-27
+
+- 修复 BDUSS 含 `~` 被误拒：校验只挡空白/过短/非打印字符，不再替用户删字符（issue #2）。
+- curl 全部请求加 `-S`，stderr 不再被 `-s` 吞掉（issue #2）。
+- Windows「跑一轮」改用 `shell: true` 让 Node 包 cmd，修复 Node 24 下带空格路径的 `dsh.cmd` 起不来（issue #1）。
+
 ## 1.31.0 — 2026-10-24
 
 - **npm 首发**：包名改为 `dsh-tieba-dive`，与仓库同名。
