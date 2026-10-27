@@ -2,9 +2,9 @@
 
 > 百度贴吧的 DSH 插件：自动读帖、生成日报、每日签到；回帖可选，并带频率与内容限制。
 
-[![test](https://github.com/Nekomeow114/dsh-tieba-scroll/actions/workflows/test.yml/badge.svg)](https://github.com/Nekomeow114/dsh-tieba-scroll/actions/workflows/test.yml)
-[![release](https://img.shields.io/github/v/release/Nekomeow114/dsh-tieba-scroll)](https://github.com/Nekomeow114/dsh-tieba-scroll/releases)
-[![license](https://img.shields.io/github/license/Nekomeow114/dsh-tieba-scroll)](LICENSE)
+[![test](https://github.com/Nekomeow114/dsh-tieba-dive/actions/workflows/test.yml/badge.svg)](https://github.com/Nekomeow114/dsh-tieba-dive/actions/workflows/test.yml)
+[![release](https://img.shields.io/github/v/release/Nekomeow114/dsh-tieba-dive)](https://github.com/Nekomeow114/dsh-tieba-dive/releases)
+[![license](https://img.shields.io/github/license/Nekomeow114/dsh-tieba-dive)](LICENSE)
 
 ⚠️ 走的是贴吧手机版页面（逆向解析），不是官方 API。贴吧改版可能失效，频繁请求可能触发风控；
 账号风险与发布内容由使用者自行承担。
@@ -81,7 +81,7 @@ AstrBot / Codex 的 MCP 配置（命令 + 环境变量）：
 
 ```bash
 dsh plugin --profile web add dsh-tieba-scroll                    # npm（发布后）
-dsh plugin --profile web add github:Nekomeow114/dsh-tieba-scroll # 或从仓库
+dsh plugin --profile web add github:Nekomeow114/dsh-tieba-dive # 或从仓库
 ```
 
 安装后重启一次 dsh，进入 **设置 → 刷贴吧**。
