@@ -1,7 +1,7 @@
 {
-  "name": "dsh-tieba-scroll",
-  "version": "1.30.0",
-  "description": "DSH 插件 · 刷贴吧：每天替你看几个百度贴吧——读帖挑重点、写日报；自动签到（顺手关注），回帖可选（意图分类 + 客服腔闸门）。支持人设、公开/私人日记、谷时定时跑。",
+  "name": "dsh-tieba-dive",
+  "version": "1.31.0",
+  "description": "DSH 插件 · 泡贴吧：读帖挑重点、写日报、自动签到；学习每个吧的语风（风格库），回帖与楼中楼可选（默认关）。支持人设、日记、峰谷定时与只读 MCP。",
   "keywords": [
     "dsh",
     "dsh-plugin",
@@ -26,9 +26,9 @@
     "lib",
     "prompts",
     "README.md",
-    "AGENTS.md",
     "LICENSE",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "mcp-server.mjs"
   ],
   "engines": {
     "dsh": ">=0.1.7-rc.1",

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.31.0 — 2026-10-24
+
+- **npm 首发**：包名改为 `dsh-tieba-dive`，与仓库同名。
+- 发布内容补上 `mcp-server.mjs`（只读 MCP，Codex/AstrBot 可用）。
+- 插件内部 id 仍为 `dsh-tieba-scroll`，已有 profile 配置不断。
+
 ## 1.30.0 — 2026-10-24
 
 - 新增零依赖 MCP stdio server（`mcp-server.mjs`），只读：

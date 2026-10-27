@@ -1,4 +1,4 @@
-# dsh-tieba-scroll
+# dsh-tieba-dive
 
 > 百度贴吧的 DSH 插件：自动读帖、生成日报、每日签到；回帖可选，并带频率与内容限制。
 
@@ -70,7 +70,7 @@ AstrBot / Codex 的 MCP 配置（命令 + 环境变量）：
   "mcpServers": {
     "tieba": {
       "command": "node",
-      "args": ["/绝对路径/dsh-tieba-scroll/mcp-server.mjs"],
+      "args": ["/绝对路径/dsh-tieba-dive/mcp-server.mjs"],
       "env": { "DSH_HOME": "/root/.dsh" }
     }
   }
@@ -80,7 +80,7 @@ AstrBot / Codex 的 MCP 配置（命令 + 环境变量）：
 ## 安装
 
 ```bash
-dsh plugin --profile web add dsh-tieba-scroll                    # npm（发布后）
+dsh plugin --profile web add dsh-tieba-dive                    # npm
 dsh plugin --profile web add github:Nekomeow114/dsh-tieba-dive # 或从仓库
 ```
 
@@ -92,7 +92,7 @@ Windows 说明：npm 安装的 `dsh` 是 `.cmd` 启动器，插件会通过 `cmd
 并把这一轮的 prompt 落成文件、命令行只传一句「读取该文件」——避免长文本里的引号和换行被 cmd 拆坏。定时功能另需在 headless profile 中安装本插件：
 
 ```bash
-dsh plugin --profile headless add dsh-tieba-scroll
+dsh plugin --profile headless add dsh-tieba-dive
 ```
 
 ## 设置页结构

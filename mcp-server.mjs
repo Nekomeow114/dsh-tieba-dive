@@ -14,7 +14,7 @@ import * as tieba from './lib/tieba.js'
 import { retrieve } from './lib/stylelib.mjs'
 import { readReport } from './lib/reports.mjs'
 
-const VERSION = '1.29.0'
+const VERSION = '1.31.0'
 const cfg = (() => { try { return readConfig() } catch { return {} } })()
 try { tieba.setGap(cfg.requestGapMs || 1200) } catch { /* ignore */ }
 try { tieba.setBreakerMinutes(cfg.breakerMin ?? 30) } catch { /* ignore */ }
