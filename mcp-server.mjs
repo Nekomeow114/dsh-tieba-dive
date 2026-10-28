@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * dsh-tieba-scroll 的 MCP server（stdio，零依赖，只读）
+ * dsh-tieba-dive 的 MCP server（stdio，零依赖，只读）
  *
- * 给 Codex / Claude Desktop / AstrBot 等 MCP 客户端用：
+ * 供任何支持 MCP stdio 的客户端拉起（Codex / Claude Desktop / AstrBot 等；未逐客户端实测）：
  *   node mcp-server.mjs
  * 环境变量：DSH_HOME（默认 ~/.dsh），读 $DSH_HOME/tieba-duty/config.json 与 cookie.txt。
  *
@@ -123,4 +123,4 @@ async function handle(msg) {
 
 const rl = readline.createInterface({ input: process.stdin })
 rl.on('line', (line) => { if (line.trim()) { try { handle(JSON.parse(line)) } catch (e) { process.stderr.write(`bad message: ${e.message}\n`) } } })
-process.stderr.write(`dsh-tieba-scroll MCP (read-only) ready · ${tools.length} tools\n`)
+process.stderr.write(`dsh-tieba-dive MCP (read-only) ready · ${tools.length} tools\n`)
