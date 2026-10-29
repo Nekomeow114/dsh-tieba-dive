@@ -134,6 +134,7 @@ BDUSS 获取方式：电脑浏览器登录贴吧 → `F12` → Application → C
 | `replyGapSec` | 30 | 两条回复的最小间隔 |
 | `answerQuestions` | 开 | 允许在回帖中解答疑问 |
 | `allowSubReply` | 关 | 允许回复自己评论下的楼中楼 |
+| `allowChatRun` | 关 | 允许模型在聊天/QQ 里触发一轮 |
 | `subReplyPerRound` / `subReplyPerDay` | 1 / 3 | 楼中楼每轮 / 每天上限 |
 | `toneGate` | 开 | 拦截客服腔（首先 / 其次 / 希望对你有帮助 等） |
 | `mention` | 空 | 回帖时 @ 的昵称 |
@@ -191,6 +192,8 @@ BDUSS 获取方式：电脑浏览器登录贴吧 → `F12` → Application → C
 | `tieba_reply` | 回帖（需 `confirm: true`，受上述限制） |
 | `tieba_sub_replies` | 读某一层下的楼中楼（只读） |
 | `tieba_reply_sub` | 回自己评论下的楼中楼（需 `confirm: true`，默认关） |
+| `tieba_run_round` | 聊天里启动一轮（需 `confirm: true` + `allowChatRun`） |
+| `tieba_run_status` | 查本轮是否在跑、今天回了几条、日志路径 |
 | `tieba_style_refs` | 从风格库检索该吧高赞回复当参考 |
 | `tieba_follow` | 关注一个吧 |
 | `tieba_followed` | 列出账号关注的所有吧 |

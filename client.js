@@ -1653,6 +1653,9 @@ window.__ModuleLoader__.load({
             // 发新帖与发图双栏扩展
             h('div', { key: 'ext', className: 'tb-grid-2', style: { marginTop: 10 } }, [
               h('div', { key: 'ntbox', className: 'tb-subcard', style: { marginTop: 0 } }, [
+                h(Sw, { key: 'cr', on: c.allowChatRun === true, onChange: (v) => save({ allowChatRun: v }),
+                  text: '允许聊天/QQ 触发一轮（默认关）' }),
+                h('div', { key: 'crh', className: 'tb-kv' }, '打开后，模型在聊天里被要求「刷一轮」才能真的启动；回帖仍受 C1 的闸门限制。'),
                 h(Sw, { key: 'nt', on: c.allowNewThread === true, onChange: (v) => save({ allowNewThread: v }),
                   text: '允许 AI 发新帖（纯文字）' }),
                 h('div', { key: 'ntq', className: 'tb-row', style: { justifyContent: 'space-between', marginBottom: 0 } }, [

@@ -1008,6 +1008,52 @@ export function apply(ctx, config = {}) {
   })
 
   tool({
+    name: 'tieba_run_round',
+    description: '在聊天里启动一轮模型刷帖（后台跑）。需设置里打开「允许聊天触发一轮」；'
+      + '公开回帖仍受原有每轮/每天/间隔闸门限制。',
+    parameters: {
+      confirm: { type: 'boolean', description: '必须显式传 true：表示使用者让你现在跑一轮' },
+    },
+    execute: async (args) => {
+      if (args.confirm !== true) return json({ ok: false, error: '没确认：启动一轮要传 confirm: true' })
+      const cfg = cfgOf()
+      if (!cfg.allowChatRun) return json({ ok: false, error: '聊天触发一轮是关着的：去设置 C2 打开「允许聊天触发一轮」' })
+      if (process.env.TIEBA_ROUND_ID) return json({ ok: false, error: '已经在某一轮里了，不能套娃再起一轮' })
+      if (collecting || roundRunning) return json({ ok: false, error: '已经有一轮在跑了，等它结束' })
+      if (!tieba.hasCookie()) return json({ ok: false, error: '还没贴 BDUSS' })
+      if (!cfg.bars || !cfg.bars.length) return json({ ok: false, error: '「要刷的吧」是空的，先在设置里填吧名' })
+      const stPre = freshState()
+      if (cfg.autoReply && stPre.replies >= cfg.replyPerDay) {
+        return json({ ok: false, error: `今天的回帖额度用完了（${stPre.replies}/${cfg.replyPerDay}）` })
+      }
+      roundRunning = true
+      const r0 = startRound('chat')
+      const logPath = logFile()
+      runRound({ profile: cfg.headlessProfile, dshBin: cfg.dshBin, roundId: r0.id })
+        .then((r) => log(`聊天触发的一轮结束：ok=${r.ok} code=${r.code ?? '-'}`))
+        .catch((e) => log(`聊天触发的一轮出错：${e?.message ?? e}`))
+        .finally(() => { roundRunning = false; endRound(r0.id) })
+      return json({
+        ok: true, started: true, roundId: r0.id, log: logPath,
+        hint: '后台跑，几分钟；用 tieba_run_status 看进度，跑完看最近日报',
+      })
+    },
+  })
+
+  tool({
+    name: 'tieba_run_status',
+    description: '看当前刷帖轮是否在跑、今天回了几条、日志在哪。',
+    parameters: {},
+    execute: async () => {
+      const st = freshState()
+      return json({
+        ok: true, running: roundRunning, collecting, round: st.round || null,
+        repliesToday: st.replies, lastRunDate: st.lastRunDate || '', log: logFile(),
+      })
+    },
+  })
+
+  tool({
     name: 'tieba_sub_replies',
     description: '读某一层楼下的楼中楼（只读）。pid 是楼层 id（可从 tieba_thread 的 floorIds / hotFloors 拿）；'
       + '只知道楼层号时传 floor，会自动换算。',

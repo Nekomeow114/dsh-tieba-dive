@@ -142,6 +142,13 @@
 4. 提炼 **1~3 句**「这个吧怎么说话」——**改写，不贴原话**；
 5. 用 `tieba_style_observe({kw, samples, tags})` 记下来，标签写「抽象 / 阴阳 / 温柔 / 急躁」这类。
 
+**被要求「刷一轮」时**
+
+- 如果设置里开了 `allowChatRun`，调用 `tieba_run_round({confirm: true})` 启动后台一轮；
+- 用 `tieba_run_status` 回报进度；跑完让使用者看最近日报；
+- 没开就直说「去设置 C2 打开允许聊天触发一轮」，不要编「还在等」；
+- 已经在某一轮里时不要套娃再起。
+
 **回帖时**
 
 - 如果配置开了 `allowSubReply`，回完自己的楼层后可以看一眼 `tieba_sub_replies({tid, pid})`；
