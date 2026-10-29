@@ -37,6 +37,16 @@
 ```
 
 默认不改变人设；旧版「泡满 3 次微调旋钮」已改为显式开关 `allowSoak`，**默认关闭**。
+## 检查 profile / 工具
+
+```bash
+node scripts/check-profiles.mjs
+# 或 npm run check:profiles
+```
+
+逐个 profile 检查：依赖有没有装、bundle 有没有登记、包名是否一致、工具是否齐全；
+空 profile（如 `default`）会跳过。缺什么会直接给出 `dsh plugin --profile ... add ...` 命令。
+
 ## MCP（可被支持 MCP 的客户端调用）
 
 仓库自带一个**零依赖、只读**的 MCP stdio server：`mcp-server.mjs`。

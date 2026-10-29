@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.32.1 — 2026-10-27
+
+- 新增 `scripts/check-profiles.mjs`：检查每个 DSH profile 是否装了插件、bundle 是否登记、
+  包名是否一致、`tieba_*` 工具是否齐全；空 profile 跳过，并给出修复命令。
+
 ## 1.32.0 — 2026-10-27
 
 - 新增 `tieba_run_round` / `tieba_run_status`：聊天或 QQ 里被要求「刷一轮」时，模型能真正启动后台模型轮并查进度。
