@@ -1087,12 +1087,9 @@ window.__ModuleLoader__.load({
             ? '✗ ' + b.kw + '：' + b.error
             : '✓ ' + b.kw + '：读到 ' + b.read + ' 个贴（新帖 ' + b.fresh + ' 个）')
           let tail = ''
-          const c = cfg || {}
-          if (c.autoReply && (c.replyPerRound ?? 1) > 0) {
-            setMsg({ ok: true, text: lines.join('\n') + '\n\n接着让模型跑一轮…' })
-            const rr = await jpost('/run-headless', {})
-            tail = '\n模型轮：' + (rr.started ? '已在后台启动' : (rr.error || '没启动')) + '（日志见下方自动化卡）'
-          }
+          setMsg({ ok: true, text: lines.join('\n') + '\n\n接着让模型跑一轮…' })
+          const rr = await jpost('/run-headless', {})
+          tail = '\n模型轮：' + (rr.started ? '已在后台启动' : (rr.error || '没启动')) + '（日志见下方自动化卡）'
           setMsg({ ok: (r.bars || []).every((b) => !b.error), text: lines.join('\n') + tail })
           await refresh()
         } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }

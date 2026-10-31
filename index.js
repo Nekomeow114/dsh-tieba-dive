@@ -299,7 +299,7 @@ export function apply(ctx, config = {}) {
             const r = stopRound()
             roundRunning = false
             collecting = false
-            endRound(collectId)
+            endRound()
             log('手动停止本轮：' + (r.ok ? '已发信号' : r.error))
             return sendJson(res, 200, { ok: true, ...r })
           }
