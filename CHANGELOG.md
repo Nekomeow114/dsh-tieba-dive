@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.32.2 — 2026-10-27
+
+- 文案改回「刷贴吧」（不再用「泡贴吧」）。
+- MCP 描述收敛为「只读 MCP stdio server，未逐客户端实测」，不再声称可接 Codex/AstrBot。
+
 ## 1.32.1 — 2026-10-27
 
 - 新增 `scripts/check-profiles.mjs`：检查每个 DSH profile 是否装了插件、bundle 是否登记、
