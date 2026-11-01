@@ -1,6 +1,6 @@
 {
   "name": "dsh-tieba-dive",
-  "version": "1.33.0",
+  "version": "1.33.1",
   "description": "DSH 插件 · 刷贴吧：读帖挑重点、写日报、自动签到；学习每个吧的语风（风格库），回帖与楼中楼可选（默认关）。支持人设、日记、峰谷定时，另带只读 MCP stdio server（未逐客户端实测）。",
   "keywords": [
     "dsh",

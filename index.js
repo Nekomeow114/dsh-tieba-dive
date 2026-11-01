@@ -1061,13 +1061,27 @@ export function apply(ctx, config = {}) {
       }
       if (st.mentionReplied && st.mentionReplied[at.pid]) return json({ ok: false, error: '这条 @ 已经回过了' })
 
-      const r = await tieba.replyFloor({ kw: at.fname, tid: at.tid, content: text })
+      // 能定位到主楼层就回在楼中楼（挂回 @ 下面）；找不到就退回新楼层
+      let r = null
+      let mode = 'floor'
+      if (!at.isFloor) {
+        const parentPid = await tieba.findFloorOfSubPost(at.tid, at.pid)
+        if (parentPid) {
+          r = await tieba.replySub({
+            tid: at.tid, kw: at.fname, quoteId: parentPid, subPostId: at.pid,
+            replyUid: String(at.replyer.id), content: text,
+            replyName: at.replyer.nameShow, replyPortrait: at.replyer.portrait,
+          })
+          mode = 'sub'
+        }
+      }
+      if (!r) r = await tieba.replyFloor({ kw: at.fname, tid: at.tid, content: text })
       st.mentionReplies = (Number(st.mentionReplies) || 0) + 1
       st.mentionReplied = st.mentionReplied || {}
       st.mentionReplied[at.pid] = Date.now()
       writeState(st)
-      audit({ kind: 'mention-reply', kw: at.fname, tid: at.tid, atPid: at.pid, to: at.replyer.nameShow, content: text, newPid: r.pid })
-      return json({ ok: true, pid: r.pid, to: at.replyer.nameShow, content: text })
+      audit({ kind: 'mention-reply', kw: at.fname, tid: at.tid, atPid: at.pid, to: at.replyer.nameShow, content: text, newPid: r.pid, mode })
+      return json({ ok: true, pid: r.pid, mode, to: at.replyer.nameShow, content: text })
     },
   })
 
