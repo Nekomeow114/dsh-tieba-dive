@@ -1008,6 +1008,70 @@ export function apply(ctx, config = {}) {
   })
 
   tool({
+    name: 'tieba_mentions',
+    description: '列出最近 @ 我的贴吧回复（只读）。默认只显示最近 12 小时、还没回过的。',
+    parameters: {
+      limit: { type: 'number', description: '最多几条，默认 10' },
+    },
+    execute: async (args) => {
+      if (!tieba.hasCookie()) return json({ ok: false, error: '还没贴 BDUSS' })
+      const cfg = cfgOf()
+      const st = freshState()
+      const ats = await tieba.getAts()
+      const now = Date.now()
+      const list = ats.filter((a) => {
+        if (st.mentionReplied && st.mentionReplied[a.pid]) return false
+        if (now / 1000 - a.time > cfg.mentionMaxAgeMin * 60) return false
+        return true
+      }).slice(0, Math.max(1, Math.min(20, Number(args.limit) || 10)))
+      return json({ ok: true, count: list.length, mentions: list, note: '要回复用 tieba_reply_mention({postId, content, confirm:true})；默认只回自己最近被 @ 的。' })
+    },
+  })
+
+  tool({
+    name: 'tieba_reply_mention',
+    description: '回复一条 @ 我的贴吧回复（作为新楼层）。默认关，受最近时间与每天上限限制。',
+    parameters: {
+      postId: { type: 'string', required: true, description: 'tieba_mentions 返回的 pid' },
+      content: { type: 'string', required: true, description: '回复正文（4~300 字）' },
+      confirm: { type: 'boolean', description: '必须显式传 true：表示使用者同意回复' },
+    },
+    execute: async (args) => {
+      if (args.confirm !== true) return json({ ok: false, error: '没确认：公开回复要传 confirm: true' })
+      const cfg = cfgOf()
+      if (!cfg.allowMentionReply) return json({ ok: false, error: '被 @ 回复是关着的：去设置 C1 打开「被 @ 时回复」' })
+      if (!tieba.hasCookie()) return json({ ok: false, error: '还没贴 BDUSS' })
+      const text = String(args.content || '').trim()
+      if (text.length < 4 || text.length > 300) return json({ ok: false, error: '正文要 4~300 字' })
+      if (cfg.toneGate) {
+        const hit = toneCheck(text)
+        if (hit.length) return json({ ok: false, error: `这句太像客服了（命中：${hit.join('、')}）` })
+      }
+      const guard = checkOutbound(text)
+      if (!guard.ok) return json({ ok: false, error: `这句里有不该发的东西（${guard.hits.join('、')}）` })
+      const me = await tieba.selfUid()
+      const st = freshState()
+      if (st.mentionReplies >= cfg.mentionPerDay) return json({ ok: false, error: `今天回 @ 的额度用完了（${cfg.mentionPerDay} 条）` })
+      const ats = await tieba.getAts()
+      const at = ats.find((x) => String(x.pid) === String(args.postId))
+      if (!at) return json({ ok: false, error: '没找到这条 @（可能已被删或太旧）' })
+      if (at.replyer.id === me) return json({ ok: false, error: '这条是自己发的，不回自己' })
+      if (Date.now() / 1000 - at.time > cfg.mentionMaxAgeMin * 60) {
+        return json({ ok: false, error: `这条 @ 太久了（超过 ${cfg.mentionMaxAgeMin} 分钟），不回了` })
+      }
+      if (st.mentionReplied && st.mentionReplied[at.pid]) return json({ ok: false, error: '这条 @ 已经回过了' })
+
+      const r = await tieba.replyFloor({ kw: at.fname, tid: at.tid, content: text })
+      st.mentionReplies = (Number(st.mentionReplies) || 0) + 1
+      st.mentionReplied = st.mentionReplied || {}
+      st.mentionReplied[at.pid] = Date.now()
+      writeState(st)
+      audit({ kind: 'mention-reply', kw: at.fname, tid: at.tid, atPid: at.pid, to: at.replyer.nameShow, content: text, newPid: r.pid })
+      return json({ ok: true, pid: r.pid, to: at.replyer.nameShow, content: text })
+    },
+  })
+
+  tool({
     name: 'tieba_run_round',
     description: '在聊天里启动一轮模型刷帖（后台跑）。需设置里打开「允许聊天触发一轮」；'
       + '公开回帖仍受原有每轮/每天/间隔闸门限制。',

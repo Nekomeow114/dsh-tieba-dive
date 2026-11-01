@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.33.0 (wip) — 2026-10-30
+
+- 新增 `tieba_mentions` / `tieba_reply_mention`：读最近 @ 我的贴吧回复，可选回复（新楼层）。
+- 默认关闭；只回最近 `mentionMaxAgeMin`（默认 12 小时）内、每天最多 `mentionPerDay`（默认 3）条。
+- 用 app `/c/u/feed/atme` 接口，带签名；回复仍走 App protobuf 通道。
+
 ## 1.32.2 — 2026-10-27
 
 - 文案改回「刷贴吧」（不再用「泡贴吧」）。

@@ -149,6 +149,13 @@
 - 没开就直说「去设置 C2 打开允许聊天触发一轮」，不要编「还在等」；
 - 已经在某一轮里时不要套娃再起。
 
+**被 @ 时**
+
+- 如果设置里开了 `allowMentionReply`：每轮开始先 `tieba_mentions` 看最近 @；
+  - 只回最近、还没回过的；每轮最多挑 1 条，用 `tieba_reply_mention({postId, content, confirm:true})`；
+  - 回复作为新楼层，不去别人楼里刷；没有合适的就跳过；
+  - 没开就直说「去设置 C1 打开被 @ 时回复」，不要假装在等。
+
 **回帖时**
 
 - 如果配置开了 `allowSubReply`，回完自己的楼层后可以看一眼 `tieba_sub_replies({tid, pid})`；

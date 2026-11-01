@@ -1666,6 +1666,9 @@ window.__ModuleLoader__.load({
                   ]),
                 ]),
               ]),
+              h(Sw, { key: 'mr', on: c.allowMentionReply === true, onChange: (v) => save({ allowMentionReply: v }),
+                text: '被 @ 时回复（默认关，每天最多 3 条）' }),
+              h('div', { key: 'mrh', className: 'tb-kv' }, '只回最近 12 小时内、自己评论收到的 @；作为新楼层回复，不会去别人楼里刷。'),
               h('div', { key: 'subbox', className: 'tb-subcard', style: { marginTop: 0 } }, [
                 h(Sw, { key: 'sr', on: c.allowSubReply === true, onChange: (v) => save({ allowSubReply: v }),
                   text: '允许回复自己评论下的楼中楼（默认关）' }),
