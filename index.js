@@ -157,6 +157,7 @@ export function apply(ctx, config = {}) {
   const cfgOf = () => {
     const c = readConfig(config)
     tieba.setGap(c.requestGapMs)
+    tieba.setBreakerEnabled(c.breakerEnabled !== false)
     tieba.setBreakerMinutes(c.breakerMin)
     return c
   }

@@ -150,7 +150,8 @@ BDUSS 获取方式：电脑浏览器登录贴吧 → `F12` → Application → C
 | `mention` | 空 | 回帖时 @ 的昵称 |
 | `peakValley` | 关 | 峰谷自动刷总开关 |
 | `noon` / `night` | 开 / 开 | 中午谷、晚上谷子开关 |
-| `breakerMin` | 30 | 撞到验证码后的熔断时长（0 表示不熔断） |
+| `breakerEnabled` | 开 | 风险熔断开关（触发条件：百度安全验证） |
+| `breakerMin` | 30 | 熔断时长（分钟） |
 | `personaText` / `personaFile` | 空 | 人设文本 / 人设文件（文件优先） |
 | `styleSamples` | 空 | 语气样本，供回帖参考 |
 | `evolvePersona` | 关 | 学习总开关：读帖时建立风格库（不改人设） |

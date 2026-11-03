@@ -1709,6 +1709,20 @@ window.__ModuleLoader__.load({
                 (c.autoSign ? '自动签到开' : '自动签到关') + ' · ' + (c.peakValley ? '峰谷排班开' : '排班关')),
             ]),
 
+            // 风险熔断
+            h('div', { key: 'brkbox', className: 'tb-subcard', style: { marginTop: 0 } }, [
+              h(Sw, { key: 'be', on: c.breakerEnabled !== false, onChange: (v) => save({ breakerEnabled: v }),
+                text: '风险熔断：遇到百度安全验证时自动暂停请求' }),
+              h('div', { key: 'brq', className: 'tb-row', style: { justifyContent: 'space-between', marginBottom: 0 } }, [
+                h('span', { key: 'a', className: 'tb-kv' }, '暂停时长'),
+                h('div', { key: 'r', className: 'tb-row', style: { margin: 0 } }, [
+                  h('input', { key: 'b', className: 'tb-num', type: 'number', ...num('breakerMin') }),
+                  h('span', { key: 'c', className: 'tb-kv' }, '分钟'),
+                ]),
+              ]),
+              h('div', { key: 'brh', className: 'tb-kv' }, '触发条件：贴吧接口返回「百度安全验证」。关闭后不会自动暂停，但请求仍会失败；默认开，30 分钟。'),
+            ]),
+
             // 签到块
             h('div', { key: 'signbox', className: 'tb-subcard', style: { marginTop: 0 } }, [
               h('div', { key: 'st', className: 'tb-subcard-title' }, [
