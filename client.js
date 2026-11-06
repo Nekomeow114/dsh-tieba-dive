@@ -1437,8 +1437,44 @@ window.__ModuleLoader__.load({
             h('div', { key: 'hd', className: 'tb-card-hd' }, [
               h('div', { key: 't', className: 'tb-card-title' }, '人设'),
               h('span', { key: 'st', className: 'tb-tag primary' },
-                persona ? ('当前版本 v' + persona.version + ' · 核心层已锁定') : '读取人设版本中…'),
+                persona ? ('当前版本 v' + persona.version + ' · 底线已锁定') : '读取人设版本中…'),
             ]),
+
+            // 核心身份：只给主人开的口子，底线仍锁死
+            persona ? h('div', { key: 'core', className: 'tb-subcard', style: { marginTop: 0, marginBottom: 12 } }, [
+              h('div', { key: 'l', className: 'tb-subcard-title' }, [
+                h('span', { key: 'a' }, '🪪 核心身份（仅主人可改）'),
+              ]),
+              h('div', { key: 'g', className: 'tb-grid-2' }, [
+                h('div', { key: 'g1' }, [
+                  h('div', { key: 'nl', className: 'tb-label', style: { marginTop: 0 } }, '名字'),
+                  h('input', { key: 'ni', className: 'tb-in', value: (persona.core && persona.core.name) || '',
+                    onChange: (e) => setPersona({ ...persona, core: { ...persona.core, name: e.target.value } }) }),
+                ]),
+                h('div', { key: 'g2' }, [
+                  h('div', { key: 'sl', className: 'tb-label', style: { marginTop: 0 } }, '自称'),
+                  h('input', { key: 'si', className: 'tb-in', value: (persona.core && persona.core.selfRef) || '',
+                    onChange: (e) => setPersona({ ...persona, core: { ...persona.core, selfRef: e.target.value } }) }),
+                ]),
+              ]),
+              h('div', { key: 'al', className: 'tb-label' }, '对主人的称呼'),
+              h('input', { key: 'ai', className: 'tb-in', value: (persona.core && persona.core.addressOwner) || '',
+                onChange: (e) => setPersona({ ...persona, core: { ...persona.core, addressOwner: e.target.value } }) }),
+              h('div', { key: 'bt', className: 'tb-kv' }, '底线仍锁死，不会被名字/自称改动；这个入口模型和演化流程调不到。'),
+              h('div', { key: 'r', className: 'tb-row' }, [
+                h('button', { key: 'b', className: 'tb-btn soft sm', disabled: busy,
+                  onClick: async () => {
+                    setBusy(true)
+                    try {
+                      const r = await jpost('/persona/core', {
+                        name: persona.core.name, selfRef: persona.core.selfRef, addressOwner: persona.core.addressOwner,
+                      })
+                      setPersona(r.persona); setProfile((await jget('/persona/state')).profile || '')
+                      setMsg({ ok: true, text: '核心身份已保存（v' + r.persona.version + '）' })
+                    } catch (e) { setMsg({ ok: false, text: String(e.message || e) }) } finally { setBusy(false) }
+                  } }, '保存核心身份'),
+              ]),
+            ]) : null,
 
             // 语气词与句式（可手改）
             persona ? h('div', { key: 'voice', className: 'tb-subcard', style: { marginTop: 0, marginBottom: 12 } }, [

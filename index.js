@@ -26,7 +26,7 @@ import { localStamp } from './lib/time.mjs'
 import { checkOutbound } from './lib/guard.mjs'
 import { isSameOrigin } from './lib/origin.mjs'
 import { readProposals, addProposal, getProposal, setStatus, mergeSamples, appendEvolutionNote } from './lib/evolve.mjs'
-import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS, getVersion, voiceProfile } from './lib/persona.mjs'
+import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS, getVersion, voiceProfile, mergeCore } from './lib/persona.mjs'
 import { applyEvolution, canEvolveToday, readEvolutionState, driftReport, pauseEvolution, resumeEvolution } from './lib/evolution.mjs'
 import { observeBar, getStyle, renderStyle, bestSamplesFor, styleSummary, effectiveTraits, MODES, soakEffect, SOAK_EVERY } from './lib/style.mjs'
 import { appendTimeline, readTimeline } from './lib/timeline.mjs'
@@ -348,6 +348,13 @@ export function apply(ctx, config = {}) {
             const body = (await readBody(req)) || {}
             try { return sendJson(res, 200, { ok: true, persona: updatePersona({ traits: body.traits || {} }, { reason: String(body.reason || 'ui') }) }) }
             catch (e) { return sendJson(res, 500, { ok: false, error: e.message }) }
+          }
+          if (sub === '/persona/core' && req.method === 'POST') {
+            const body = (await readBody(req)) || {}
+            try {
+              const core = mergeCore({ name: body.name, selfRef: body.selfRef, addressOwner: body.addressOwner })
+              return sendJson(res, 200, { ok: true, persona: updatePersona({ core }, { reason: 'owner-ui', allowCore: true }) })
+            } catch (e) { return sendJson(res, 500, { ok: false, error: e.message }) }
           }
           if (sub === '/persona/voice' && req.method === 'POST') {
             const body = (await readBody(req)) || {}

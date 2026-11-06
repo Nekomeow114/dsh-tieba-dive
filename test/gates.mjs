@@ -200,6 +200,16 @@ const upOk = parseUploadResponse("window.imageUploadResult=1;var result={imageSr
 ok(upOk.ok && upOk.imageInfo === 'abc123,1,1,false' && upOk.imageSrc.includes('m.tiebaimg.com'), '图床：解析成功响应')
 ok(!parseUploadResponse('{"errorMsg":"图片上传失败，请重新上传"}').ok, '图床：失败响应识别')
 
+// 11.58 核心身份：主人可改名字/自称/称呼，底线仍锁死
+{
+  const per = await import('../lib/persona.mjs')
+  const a = per.updatePersona({ core: { name: '测试鱼', selfRef: '俺', addressOwner: '老板', bottomLines: ['坏底线'] } }, { reason: 'test', allowCore: true })
+  ok(a.core.name === '测试鱼' && a.core.selfRef === '俺' && a.core.addressOwner === '老板', '核心身份：名字/自称/称呼可改')
+  ok(a.core.bottomLines.includes('不伤人、不阴阳、不拿别人的痛处玩梗') && !a.core.bottomLines.includes('坏底线'), '核心身份：底线不可覆盖')
+  const b = per.updatePersona({ core: { name: '偷偷改' } }, { reason: 'ai' })
+  ok(b.core.name === '测试鱼', '核心身份：不带 allowCore 改不了')
+}
+
 // 11.59 语风导出
 {
   const lib = await import('../lib/stylelib.mjs')
