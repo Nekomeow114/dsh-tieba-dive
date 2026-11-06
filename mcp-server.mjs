@@ -38,14 +38,14 @@ const tools = [
     run: async (a) => ok(await tieba.listBar(String(a.kw), { pn: 0 })),
   },
   {
-    name: 'tieba_thread', description: '读帖子楼层正文；附带 floorIds（楼层号→pid）与高赞楼层',
+    name: 'tieba_thread', description: '读帖子楼层正文（pn 是页码，每页 30 层）；附带 floorIds（楼层号→pid）与高赞楼层',
     inputSchema: { type: 'object', properties: { tid: { type: 'string' }, pn: { type: 'number' } }, required: ['tid'], additionalProperties: false },
     run: async (a) => {
       const r = await tieba.readThread(String(a.tid), { pn: Number(a.pn) || 1 })
       try {
         const hot = await tieba.hotReplies(String(a.tid), { rn: 30 })
         r.hotFloors = hot.slice(0, 6).map((p) => ({ floor: p.floor, id: p.id, likes: p.likes, replies: p.replies, text: p.text }))
-        r.floorIds = Object.fromEntries(hot.map((p) => [p.floor, p.id]))
+        r.floorIds = { ...(r.floorIds || {}), ...Object.fromEntries(hot.map((p) => [p.floor, p.id])) }
         r.likesKnown = true
       } catch (e) { r.likesKnown = false; r.hotError = e.message }
       return ok(r)

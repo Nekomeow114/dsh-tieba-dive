@@ -978,7 +978,7 @@ export function apply(ctx, config = {}) {
 
   tool({
     name: 'tieba_thread',
-    description: '读一个帖子的楼层正文。判断内容靠它，别看标题下结论。',
+    description: '读一个帖子的楼层正文（pn 是页码，每页 30 层）。判断内容靠它，别看标题下结论。',
     parameters: {
       tid: { type: 'string', description: '帖子 id（数字）' },
       pn: { type: 'number', description: '第几页（默认 1）' },
@@ -990,7 +990,8 @@ export function apply(ctx, config = {}) {
       try {
         const hot = await tieba.hotReplies(tid, { rn: 30 })
         r.hotFloors = hot.slice(0, 6).map((p) => ({ floor: p.floor, id: p.id, likes: p.likes, replies: p.replies, text: p.text }))
-        r.floorIds = Object.fromEntries(hot.map((p) => [p.floor, p.id]))   // 楼层号 → 楼层 id
+        // 楼层号 → 楼层 id；手机版分页解析出的 id 也保留（热门接口只覆盖前 30 层）
+        r.floorIds = { ...(r.floorIds || {}), ...Object.fromEntries(hot.map((p) => [p.floor, p.id])) }
         r.likesKnown = true
         if (cfgOf().evolvePersona && r.kw) {
           try {

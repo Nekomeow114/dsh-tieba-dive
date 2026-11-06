@@ -85,10 +85,6 @@ const st2 = freshState()
 ok(st2.replies === 0, '状态：跨天自动清零回帖数')
 ok(st2.date === localToday(), '状态：日期跟今天一致（本地时区）')
 
-console.log(bad ? `\n${bad} 项失败` : '\n全部通过')
-fs.rmSync(tmp, { recursive: true, force: true })
-process.exit(bad ? 1 : 0)
-
 // 11.6 人设演化
 const evo = await import('../lib/evolve.mjs')
 const vs = evo.validateSamples(['哈？这也行', 'x', '看 https://a.b', '这书我也在看', '哈？这也行'])
@@ -132,7 +128,8 @@ ok(r1.record.samplesAdded.length === 2, '演化：样本 1~3 条')
 ok(!evo2.applyEvolution({ samples: ['再来一句'] }).ok, '演化：一天只能一次')
 const diaryDir = pathx.join(process.env.DSH_HOME, 'tieba-duty', 'diary')
 const pub = fsx.readFileSync(pathx.join(diaryDir, 'public.md'), 'utf8')
-const priv = fsx.readFileSync(pathx.join(diaryDir, 'private.md'), 'utf8')
+const privPath = pathx.join(diaryDir, 'private.md')
+const priv = fsx.existsSync(privPath) ? fsx.readFileSync(privPath, 'utf8') : ''
 ok(pub.includes('版本 v'), '演化：公开日记写了')
 ok(!priv.includes('旋钮：'), '演化：不把机械明细写进私人日记')
 const tl = fsx.readFileSync(pathx.join(process.env.DSH_HOME, 'tieba-duty', 'timeline.jsonl'), 'utf8')
@@ -222,6 +219,7 @@ ok(!parseUploadResponse('{"errorMsg":"图片上传失败，请重新上传"}').o
 // 11.59 语风导出
 {
   const lib = await import('../lib/stylelib.mjs')
+  lib.ingest('deepseek', [{ text: '这鱼我熟，先焯水再下锅，别急着翻面', likes: 12, floor: 1 }])
   const ex = lib.exportStyle()
   ok(ex.format === 'dsh-tieba-style' && ex.version === 1, '导出：格式与版本')
   ok(Array.isArray(ex.bars) && ex.bars.length > 0, '导出：有吧数据')
@@ -321,3 +319,24 @@ ok(det.caps.memory === true && det.plugins.some((x) => x.name === 'test-plugin')
 ok(integ.capabilitySection().includes('长记忆可用'), 'capabilitySection：有 memory 时提示模型')
 const ev = integ.emitEvent('test.event', { a: 1 })
 ok(ev.line.includes('"type":"test.event"') && ev.file.endsWith('.jsonl'), 'events：一行一条 JSONL')
+
+// 12.5 楼层分页解析：手机版第 2 页标题带导航前缀，楼层号/id 要能对上
+{
+  const { parseThread } = await import('../lib/tieba.js')
+  const html = `<title>第2/3页,回贴列表-测试帖</title>
+    <div data-tid="111">&quot;floor_num&quot;:31,&quot;name_show&quot;:&quot;a&quot;</div>
+    <div class="content">第三十一楼正文</div>
+    <div data-tid="112">&quot;floor_num&quot;:32,&quot;name_show&quot;:&quot;b&quot;</div>
+    <div class="content">第三十二楼正文</div>
+    <div class="content">立即下载客户端</div>`
+  const r = parseThread(html)
+  ok(r.title === '测试帖', '分页：标题剥掉「第2/3页,回贴列表-」前缀')
+  ok(r.page === 2 && r.pages === 3, '分页：解析出页码/总页数')
+  ok(r.floors.length === 2, '分页：下载客户端横幅不算楼层')
+  ok(r.floorNos.join(',') === '31,32', '分页：楼层号按页内真实楼层走')
+  ok(r.floorIds['31'] === '111' && r.floorIds['32'] === '112', '分页：楼层号 → 楼层 id')
+}
+
+console.log(bad ? `\n${bad} 项失败` : '\n全部通过')
+fs.rmSync(tmp, { recursive: true, force: true })
+process.exit(bad ? 1 : 0)
