@@ -26,7 +26,7 @@ import { localStamp } from './lib/time.mjs'
 import { checkOutbound } from './lib/guard.mjs'
 import { isSameOrigin } from './lib/origin.mjs'
 import { readProposals, addProposal, getProposal, setStatus, mergeSamples, appendEvolutionNote } from './lib/evolve.mjs'
-import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS, getVersion, voiceProfile, mergeCore } from './lib/persona.mjs'
+import { ensurePersona, readPersona, updatePersona, listVersions, rollback, renderForPrompt, CORE, TRAIT_KEYS, TRAIT_LABELS, getVersion, voiceProfile, mergeCore, extractCoreFromText } from './lib/persona.mjs'
 import { applyEvolution, canEvolveToday, readEvolutionState, driftReport, pauseEvolution, resumeEvolution } from './lib/evolution.mjs'
 import { observeBar, getStyle, renderStyle, bestSamplesFor, styleSummary, effectiveTraits, MODES, soakEffect, SOAK_EVERY } from './lib/style.mjs'
 import { appendTimeline, readTimeline } from './lib/timeline.mjs'
@@ -348,6 +348,15 @@ export function apply(ctx, config = {}) {
             const body = (await readBody(req)) || {}
             try { return sendJson(res, 200, { ok: true, persona: updatePersona({ traits: body.traits || {} }, { reason: String(body.reason || 'ui') }) }) }
             catch (e) { return sendJson(res, 500, { ok: false, error: e.message }) }
+          }
+          if (sub === '/persona/extract' && req.method === 'POST') {
+            const cfg = cfgOf()
+            const src = resolvePersona(cfg)
+            if (!src.text) return sendJson(res, 200, { ok: false, error: src.error || '人设文件/文本是空的' })
+            const extracted = extractCoreFromText(src.text)
+            if (!Object.keys(extracted).length) return sendJson(res, 200, { ok: true, extracted: {}, persona: ensurePersona(cfg.styleSamples), note: '没找到名字/自称/称呼' })
+            const persona = updatePersona({ core: extracted }, { reason: 'persona-import', allowCore: true })
+            return sendJson(res, 200, { ok: true, extracted, persona })
           }
           if (sub === '/persona/core' && req.method === 'POST') {
             const body = (await readBody(req)) || {}

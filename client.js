@@ -1513,7 +1513,23 @@ window.__ModuleLoader__.load({
             }),
             h('div', { key: 'r', className: 'tb-row' }, [
               h('button', { key: 'b', className: 'tb-btn soft sm', disabled: busy,
-                onClick: () => save({ personaText: c.personaText || '', personaFile: c.personaFile || '' }) }, '💾 保存人设'),
+                onClick: async () => {
+                  setBusy(true); setMsg(null)
+                  try {
+                    const r = await jpost('/config', { personaText: c.personaText || '', personaFile: c.personaFile || '' })
+                    setCfg(r.cfg)
+                    const ex = await jpost('/persona/extract', {})
+                    if (ex.persona) setPersona(ex.persona)
+                    const keys = Object.keys(ex.extracted || {})
+                    if (ex.ok && keys.length) {
+                      const labels = { name: '名字', selfRef: '自称', addressOwner: '称呼' }
+                      setMsg({ ok: true, text: '✓ 人设已保存，核心身份已提取：' + keys.map((k) => labels[k] + '「' + ex.extracted[k] + '」').join('、') })
+                    } else {
+                      setMsg({ ok: true, text: '✓ 人设已保存；没找到名字/自称/称呼，可在上方核心身份里手填' })
+                    }
+                    await refresh(); await loadVersions()
+                  } catch (e) { setMsg({ ok: false, text: '没保存上：' + String(e.message || e) }) } finally { setBusy(false) }
+                } }, '💾 保存人设并提取核心身份'),
               h('label', { key: 'l', className: 'tb-btn ghost sm', style: { cursor: 'pointer', margin: 0 } }, [
                 '📂 导入文件 (.md/.txt)',
                 h('input', { key: 'i', type: 'file', accept: '.md,.txt,.markdown,text/plain', style: { display: 'none' }, onChange: importPersona }),

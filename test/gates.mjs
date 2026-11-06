@@ -200,6 +200,15 @@ const upOk = parseUploadResponse("window.imageUploadResult=1;var result={imageSr
 ok(upOk.ok && upOk.imageInfo === 'abc123,1,1,false' && upOk.imageSrc.includes('m.tiebaimg.com'), '图床：解析成功响应')
 ok(!parseUploadResponse('{"errorMsg":"图片上传失败，请重新上传"}').ok, '图床：失败响应识别')
 
+// 11.57 人设文本提取核心身份
+{
+  const per = await import('../lib/persona.mjs')
+  const a = per.extractCoreFromText('# 人设卡\n名字：小鲸鱼\n自称：人家\n对主人的称呼：老板')
+  ok(a.name === '小鲸鱼' && a.selfRef === '人家' && a.addressOwner === '老板', '提取：带标签的名字/自称/称呼')
+  const b = per.extractCoreFromText('我是莫汐，自称「咱」，称呼你为主人。')
+  ok(b.name === '莫汐' && b.selfRef === '咱' && b.addressOwner === '主人', '提取：自然句也能认')
+}
+
 // 11.58 核心身份：主人可改名字/自称/称呼，底线仍锁死
 {
   const per = await import('../lib/persona.mjs')
